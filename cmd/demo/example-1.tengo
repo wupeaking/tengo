@@ -1,0 +1,31 @@
+fmt := import("fmt")
+
+// variable definition and primitive types
+a := "foo"   // string
+b := -19.84  // floating point
+fmt.println("a: ", a)
+fmt.println("b: ", b)
+
+// assignment
+b = "bar"    // can assign value of different type
+fmt.println("b: ", b)
+
+// map and array
+m := {a: {b: {c: [1, 2, 3]}}}
+fmt.println("m: ", m)
+
+// slicing
+str := "hello world"
+fmt.println(str[1:5])    // "ello"
+arr := [1, 2, 3, 4, 5]
+fmt.println(arr[2:4])    // [3, 4]
+
+// functions
+each := func(seq, fn) {
+    // array iteration
+   // for x in seq {
+   //     fn(x)
+   // }
+
+   return seq + fn;
+}

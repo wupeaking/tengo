@@ -1,0 +1,11 @@
+c := func(a, b, c) {
+    d := 123
+    if a > b {
+        d = c
+    } else{
+        d = a
+    }
+    return d
+}
+
+c(1, 2, 3)
