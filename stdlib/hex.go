@@ -3,10 +3,10 @@ package stdlib
 import (
 	"encoding/hex"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/common"
 )
 
-var hexModule = map[string]tengo.Object{
-	"encode": &tengo.UserFunction{Value: FuncAYRS(hex.EncodeToString)},
-	"decode": &tengo.UserFunction{Value: FuncASRYE(hex.DecodeString)},
+var hexModule = map[string]common.Object{
+	"encode": &common.UserFunction{Value: FuncAYRS(hex.EncodeToString)},
+	"decode": &common.UserFunction{Value: FuncASRYE(hex.DecodeString)},
 }

@@ -11,9 +11,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/common"
+	"github.com/d5/tengo/v2/complier"
 	"github.com/d5/tengo/v2/parser"
 	"github.com/d5/tengo/v2/stdlib"
+	"github.com/d5/tengo/v2/vm"
 )
 
 const (
@@ -96,7 +98,7 @@ func main() {
 // CompileOnly compiles the source code and writes the compiled binary into
 // outputFile.
 func CompileOnly(
-	modules *tengo.ModuleMap,
+	modules *common.ModuleMap,
 	data []byte,
 	inputFile, outputFile string,
 ) (err error) {
@@ -131,7 +133,7 @@ func CompileOnly(
 
 // CompileAndRun compiles the source code and executes it.
 func CompileAndRun(
-	modules *tengo.ModuleMap,
+	modules *common.ModuleMap,
 	data []byte,
 	inputFile string,
 ) (err error) {
@@ -140,45 +142,45 @@ func CompileAndRun(
 		return
 	}
 
-	machine := tengo.NewVM(bytecode, nil, -1)
+	machine := vm.NewVM(bytecode, nil, -1)
 	err = machine.Run()
 	return
 }
 
 // RunCompiled reads the compiled binary from file and executes it.
-func RunCompiled(modules *tengo.ModuleMap, data []byte) (err error) {
-	bytecode := &tengo.Bytecode{}
+func RunCompiled(modules *common.ModuleMap, data []byte) (err error) {
+	bytecode := &complier.Bytecode{}
 	err = bytecode.Decode(bytes.NewReader(data), modules)
 	if err != nil {
 		return
 	}
 
-	machine := tengo.NewVM(bytecode, nil, -1)
+	machine := vm.NewVM(bytecode, nil, -1)
 	err = machine.Run()
 	return
 }
 
 // RunREPL starts REPL.
-func RunREPL(modules *tengo.ModuleMap, in io.Reader, out io.Writer) {
+func RunREPL(modules *common.ModuleMap, in io.Reader, out io.Writer) {
 	stdin := bufio.NewScanner(in)
 	fileSet := parser.NewFileSet()
-	globals := make([]tengo.Object, tengo.GlobalsSize)
-	symbolTable := tengo.NewSymbolTable()
-	for idx, fn := range tengo.GetAllBuiltinFunctions() {
+	globals := make([]common.Object, common.GlobalsSize)
+	symbolTable := complier.NewSymbolTable()
+	for idx, fn := range common.GetAllBuiltinFunctions() {
 		symbolTable.DefineBuiltin(idx, fn.Name)
 	}
 
 	// embed println function
 	symbol := symbolTable.Define("__repl_println__")
-	globals[symbol.Index] = &tengo.UserFunction{
+	globals[symbol.Index] = &common.UserFunction{
 		Name: "println",
-		Value: func(args ...tengo.Object) (ret tengo.Object, err error) {
+		Value: func(args ...common.Object) (ret common.Object, err error) {
 			var printArgs []interface{}
 			for _, arg := range args {
-				if _, isUndefined := arg.(*tengo.Undefined); isUndefined {
+				if _, isUndefined := arg.(*common.Undefined); isUndefined {
 					printArgs = append(printArgs, "<undefined>")
 				} else {
-					s, _ := tengo.ToString(arg)
+					s, _ := common.ToString(arg)
 					printArgs = append(printArgs, s)
 				}
 			}
@@ -188,7 +190,7 @@ func RunREPL(modules *tengo.ModuleMap, in io.Reader, out io.Writer) {
 		},
 	}
 
-	var constants []tengo.Object
+	var constants []common.Object
 	for {
 		_, _ = fmt.Fprint(out, replPrompt)
 		scanned := stdin.Scan()
@@ -206,14 +208,14 @@ func RunREPL(modules *tengo.ModuleMap, in io.Reader, out io.Writer) {
 		}
 
 		file = addPrints(file)
-		c := tengo.NewCompiler(srcFile, symbolTable, constants, modules, nil)
+		c := complier.NewCompiler(srcFile, symbolTable, constants, modules, nil)
 		if err := c.Compile(file); err != nil {
 			_, _ = fmt.Fprintln(out, err.Error())
 			continue
 		}
 
 		bytecode := c.Bytecode()
-		machine := tengo.NewVM(bytecode, globals, -1)
+		machine := vm.NewVM(bytecode, globals, -1)
 		if err := machine.Run(); err != nil {
 			_, _ = fmt.Fprintln(out, err.Error())
 			continue
@@ -223,10 +225,10 @@ func RunREPL(modules *tengo.ModuleMap, in io.Reader, out io.Writer) {
 }
 
 func compileSrc(
-	modules *tengo.ModuleMap,
+	modules *common.ModuleMap,
 	src []byte,
 	inputFile string,
-) (*tengo.Bytecode, error) {
+) (*complier.Bytecode, error) {
 	fileSet := parser.NewFileSet()
 	srcFile := fileSet.AddFile(filepath.Base(inputFile), -1, len(src))
 
@@ -236,7 +238,7 @@ func compileSrc(
 		return nil, err
 	}
 
-	c := tengo.NewCompiler(srcFile, nil, nil, modules, nil)
+	c := complier.NewCompiler(srcFile, nil, nil, modules, nil)
 	c.EnableFileImport(true)
 	if resolvePath {
 		c.SetImportDir(filepath.Dir(inputFile))

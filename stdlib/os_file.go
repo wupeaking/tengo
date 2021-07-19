@@ -3,67 +3,67 @@ package stdlib
 import (
 	"os"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/common"
 )
 
-func makeOSFile(file *os.File) *tengo.ImmutableMap {
-	return &tengo.ImmutableMap{
-		Value: map[string]tengo.Object{
+func makeOSFile(file *os.File) *common.ImmutableMap {
+	return &common.ImmutableMap{
+		Value: map[string]common.Object{
 			// chdir() => true/error
-			"chdir": &tengo.UserFunction{
+			"chdir": &common.UserFunction{
 				Name:  "chdir",
 				Value: FuncARE(file.Chdir),
 			}, //
 			// chown(uid int, gid int) => true/error
-			"chown": &tengo.UserFunction{
+			"chown": &common.UserFunction{
 				Name:  "chown",
 				Value: FuncAIIRE(file.Chown),
 			}, //
 			// close() => error
-			"close": &tengo.UserFunction{
+			"close": &common.UserFunction{
 				Name:  "close",
 				Value: FuncARE(file.Close),
 			}, //
 			// name() => string
-			"name": &tengo.UserFunction{
+			"name": &common.UserFunction{
 				Name:  "name",
 				Value: FuncARS(file.Name),
 			}, //
 			// readdirnames(n int) => array(string)/error
-			"readdirnames": &tengo.UserFunction{
+			"readdirnames": &common.UserFunction{
 				Name:  "readdirnames",
 				Value: FuncAIRSsE(file.Readdirnames),
 			}, //
 			// sync() => error
-			"sync": &tengo.UserFunction{
+			"sync": &common.UserFunction{
 				Name:  "sync",
 				Value: FuncARE(file.Sync),
 			}, //
 			// write(bytes) => int/error
-			"write": &tengo.UserFunction{
+			"write": &common.UserFunction{
 				Name:  "write",
 				Value: FuncAYRIE(file.Write),
 			}, //
 			// write(string) => int/error
-			"write_string": &tengo.UserFunction{
+			"write_string": &common.UserFunction{
 				Name:  "write_string",
 				Value: FuncASRIE(file.WriteString),
 			}, //
 			// read(bytes) => int/error
-			"read": &tengo.UserFunction{
+			"read": &common.UserFunction{
 				Name:  "read",
 				Value: FuncAYRIE(file.Read),
 			}, //
 			// chmod(mode int) => error
-			"chmod": &tengo.UserFunction{
+			"chmod": &common.UserFunction{
 				Name: "chmod",
-				Value: func(args ...tengo.Object) (tengo.Object, error) {
+				Value: func(args ...common.Object) (common.Object, error) {
 					if len(args) != 1 {
-						return nil, tengo.ErrWrongNumArguments
+						return nil, common.ErrWrongNumArguments
 					}
-					i1, ok := tengo.ToInt64(args[0])
+					i1, ok := common.ToInt64(args[0])
 					if !ok {
-						return nil, tengo.ErrInvalidArgumentType{
+						return nil, common.ErrInvalidArgumentType{
 							Name:     "first",
 							Expected: "int(compatible)",
 							Found:    args[0].TypeName(),
@@ -73,23 +73,23 @@ func makeOSFile(file *os.File) *tengo.ImmutableMap {
 				},
 			},
 			// seek(offset int, whence int) => int/error
-			"seek": &tengo.UserFunction{
+			"seek": &common.UserFunction{
 				Name: "seek",
-				Value: func(args ...tengo.Object) (tengo.Object, error) {
+				Value: func(args ...common.Object) (common.Object, error) {
 					if len(args) != 2 {
-						return nil, tengo.ErrWrongNumArguments
+						return nil, common.ErrWrongNumArguments
 					}
-					i1, ok := tengo.ToInt64(args[0])
+					i1, ok := common.ToInt64(args[0])
 					if !ok {
-						return nil, tengo.ErrInvalidArgumentType{
+						return nil, common.ErrInvalidArgumentType{
 							Name:     "first",
 							Expected: "int(compatible)",
 							Found:    args[0].TypeName(),
 						}
 					}
-					i2, ok := tengo.ToInt(args[1])
+					i2, ok := common.ToInt(args[1])
 					if !ok {
-						return nil, tengo.ErrInvalidArgumentType{
+						return nil, common.ErrInvalidArgumentType{
 							Name:     "second",
 							Expected: "int(compatible)",
 							Found:    args[1].TypeName(),
@@ -99,17 +99,17 @@ func makeOSFile(file *os.File) *tengo.ImmutableMap {
 					if err != nil {
 						return wrapError(err), nil
 					}
-					return &tengo.Int{Value: res}, nil
+					return &common.Int{Value: res}, nil
 				},
 			},
 			// stat() => imap(fileinfo)/error
-			"stat": &tengo.UserFunction{
+			"stat": &common.UserFunction{
 				Name: "stat",
-				Value: func(args ...tengo.Object) (tengo.Object, error) {
+				Value: func(args ...common.Object) (common.Object, error) {
 					if len(args) != 0 {
-						return nil, tengo.ErrWrongNumArguments
+						return nil, common.ErrWrongNumArguments
 					}
-					return osStat(&tengo.String{Value: file.Name()})
+					return osStat(&common.String{Value: file.Name()})
 				},
 			},
 		},

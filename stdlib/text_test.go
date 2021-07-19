@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/common"
 )
 
 func TestTextRE(t *testing.T) {
@@ -33,7 +33,7 @@ func TestTextRE(t *testing.T) {
 		text     string
 		expected interface{}
 	}{
-		{"a(b)", "", tengo.UndefinedValue},
+		{"a(b)", "", common.UndefinedValue},
 		{"a(b)", "ab", ARR{
 			ARR{
 				IMAP{"text": "ab", "begin": 0, "end": 2},
@@ -67,7 +67,7 @@ func TestTextRE(t *testing.T) {
 		count    int
 		expected interface{}
 	}{
-		{"a(b)", "", -1, tengo.UndefinedValue},
+		{"a(b)", "", -1, common.UndefinedValue},
 		{"a(b)", "ab", -1, ARR{
 			ARR{
 				IMAP{"text": "ab", "begin": 0, "end": 2},
@@ -96,7 +96,7 @@ func TestTextRE(t *testing.T) {
 				IMAP{"text": "c", "begin": 9, "end": 10},
 			},
 		}},
-		{"(a)b(c)d", "abcdefgabcd", 0, tengo.UndefinedValue},
+		{"(a)b(c)d", "abcdefgabcd", 0, common.UndefinedValue},
 		{"(a)b(c)d", "abcdefgabcd", 1, ARR{
 			ARR{
 				IMAP{"text": "abcd", "begin": 0, "end": 4},
@@ -232,9 +232,9 @@ func TestText(t *testing.T) {
 }
 
 func TestReplaceLimit(t *testing.T) {
-	curMaxStringLen := tengo.MaxStringLen
-	defer func() { tengo.MaxStringLen = curMaxStringLen }()
-	tengo.MaxStringLen = 12
+	curMaxStringLen := common.MaxStringLen
+	defer func() { common.MaxStringLen = curMaxStringLen }()
+	common.MaxStringLen = 12
 
 	module(t, "text").call("replace", "123456789012", "1", "x", -1).
 		expect("x234567890x2")
@@ -264,9 +264,9 @@ func TestReplaceLimit(t *testing.T) {
 }
 
 func TestTextRepeat(t *testing.T) {
-	curMaxStringLen := tengo.MaxStringLen
-	defer func() { tengo.MaxStringLen = curMaxStringLen }()
-	tengo.MaxStringLen = 12
+	curMaxStringLen := common.MaxStringLen
+	defer func() { common.MaxStringLen = curMaxStringLen }()
+	common.MaxStringLen = 12
 
 	module(t, "text").call("repeat", "1234", "3").
 		expect("123412341234")

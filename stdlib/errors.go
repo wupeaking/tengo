@@ -1,12 +1,10 @@
 package stdlib
 
-import (
-	"github.com/d5/tengo/v2"
-)
+import "github.com/d5/tengo/v2/common"
 
-func wrapError(err error) tengo.Object {
+func wrapError(err error) common.Object {
 	if err == nil {
-		return tengo.TrueValue
+		return common.TrueValue
 	}
-	return &tengo.Error{Value: &tengo.String{Value: err.Error()}}
+	return &common.Error{Value: &common.String{Value: err.Error()}}
 }

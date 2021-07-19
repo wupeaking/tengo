@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/common"
+	"github.com/d5/tengo/v2/complier"
 	"github.com/d5/tengo/v2/parser"
+	"github.com/d5/tengo/v2/vm"
 )
 
 func main() {
@@ -36,9 +38,9 @@ fib := func(x) {
 		panic(err)
 	}
 
-	if nativeResult != int(result.(*tengo.Int).Value) {
+	if nativeResult != int(result.(*common.Int).Value) {
 		panic(fmt.Errorf("wrong result: %d != %d", nativeResult,
-			int(result.(*tengo.Int).Value)))
+			int(result.(*common.Int).Value)))
 	}
 
 	fmt.Println("-------------------------------------")
@@ -73,9 +75,9 @@ fib := func(x, s) {
 		panic(err)
 	}
 
-	if nativeResult != int(result.(*tengo.Int).Value) {
+	if nativeResult != int(result.(*common.Int).Value) {
 		panic(fmt.Errorf("wrong result: %d != %d", nativeResult,
-			int(result.(*tengo.Int).Value)))
+			int(result.(*common.Int).Value)))
 	}
 
 	fmt.Println("-------------------------------------")
@@ -110,9 +112,9 @@ fib := func(x, a, b) {
 		panic(err)
 	}
 
-	if nativeResult != int(result.(*tengo.Int).Value) {
+	if nativeResult != int(result.(*common.Int).Value) {
 		panic(fmt.Errorf("wrong result: %d != %d", nativeResult,
-			int(result.(*tengo.Int).Value)))
+			int(result.(*common.Int).Value)))
 	}
 
 	fmt.Println("-------------------------------------")
@@ -160,7 +162,7 @@ func runBench(
 	parseTime time.Duration,
 	compileTime time.Duration,
 	runTime time.Duration,
-	result tengo.Object,
+	result common.Object,
 	err error,
 ) {
 	var astFile *parser.File
@@ -169,7 +171,7 @@ func runBench(
 		return
 	}
 
-	var bytecode *tengo.Bytecode
+	var bytecode *complier.Bytecode
 	compileTime, bytecode, err = compileFile(astFile)
 	if err != nil {
 		return
@@ -195,13 +197,13 @@ func parse(input []byte) (time.Duration, *parser.File, error) {
 	return time.Since(start), file, nil
 }
 
-func compileFile(file *parser.File) (time.Duration, *tengo.Bytecode, error) {
-	symTable := tengo.NewSymbolTable()
+func compileFile(file *parser.File) (time.Duration, *complier.Bytecode, error) {
+	symTable := complier.NewSymbolTable()
 	symTable.Define("out")
 
 	start := time.Now()
 
-	c := tengo.NewCompiler(file.InputFile, symTable, nil, nil, nil)
+	c := complier.NewCompiler(file.InputFile, symTable, nil, nil, nil)
 	if err := c.Compile(file); err != nil {
 		return time.Since(start), nil, err
 	}
@@ -213,13 +215,13 @@ func compileFile(file *parser.File) (time.Duration, *tengo.Bytecode, error) {
 }
 
 func runVM(
-	bytecode *tengo.Bytecode,
-) (time.Duration, tengo.Object, error) {
-	globals := make([]tengo.Object, tengo.GlobalsSize)
+	bytecode *complier.Bytecode,
+) (time.Duration, common.Object, error) {
+	globals := make([]common.Object, common.GlobalsSize)
 
 	start := time.Now()
 
-	v := tengo.NewVM(bytecode, globals, -1)
+	v := vm.NewVM(bytecode, globals, -1)
 	if err := v.Run(); err != nil {
 		return time.Since(start), nil, err
 	}

@@ -4,7 +4,7 @@ import (
 	gojson "encoding/json"
 	"testing"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/common"
 	"github.com/d5/tengo/v2/require"
 	"github.com/d5/tengo/v2/stdlib/json"
 )
@@ -89,7 +89,7 @@ func testDecodeError(t *testing.T, input string) {
 }
 
 func testJSONEncodeDecode(t *testing.T, v interface{}) {
-	o, err := tengo.FromInterface(v)
+	o, err := common.FromInterface(v)
 	require.NoError(t, err)
 
 	b, err := json.Encode(o)
@@ -101,7 +101,7 @@ func testJSONEncodeDecode(t *testing.T, v interface{}) {
 	vj, err := gojson.Marshal(v)
 	require.NoError(t, err)
 
-	aj, err := gojson.Marshal(tengo.ToInterface(a))
+	aj, err := gojson.Marshal(common.ToInterface(a))
 	require.NoError(t, err)
 
 	require.Equal(t, vj, aj)

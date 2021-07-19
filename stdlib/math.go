@@ -3,230 +3,230 @@ package stdlib
 import (
 	"math"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/common"
 )
 
-var mathModule = map[string]tengo.Object{
-	"e":       &tengo.Float{Value: math.E},
-	"pi":      &tengo.Float{Value: math.Pi},
-	"phi":     &tengo.Float{Value: math.Phi},
-	"sqrt2":   &tengo.Float{Value: math.Sqrt2},
-	"sqrtE":   &tengo.Float{Value: math.SqrtE},
-	"sqrtPi":  &tengo.Float{Value: math.SqrtPi},
-	"sqrtPhi": &tengo.Float{Value: math.SqrtPhi},
-	"ln2":     &tengo.Float{Value: math.Ln2},
-	"log2E":   &tengo.Float{Value: math.Log2E},
-	"ln10":    &tengo.Float{Value: math.Ln10},
-	"log10E":  &tengo.Float{Value: math.Log10E},
-	"abs": &tengo.UserFunction{
+var mathModule = map[string]common.Object{
+	"e":       &common.Float{Value: math.E},
+	"pi":      &common.Float{Value: math.Pi},
+	"phi":     &common.Float{Value: math.Phi},
+	"sqrt2":   &common.Float{Value: math.Sqrt2},
+	"sqrtE":   &common.Float{Value: math.SqrtE},
+	"sqrtPi":  &common.Float{Value: math.SqrtPi},
+	"sqrtPhi": &common.Float{Value: math.SqrtPhi},
+	"ln2":     &common.Float{Value: math.Ln2},
+	"log2E":   &common.Float{Value: math.Log2E},
+	"ln10":    &common.Float{Value: math.Ln10},
+	"log10E":  &common.Float{Value: math.Log10E},
+	"abs": &common.UserFunction{
 		Name:  "abs",
 		Value: FuncAFRF(math.Abs),
 	},
-	"acos": &tengo.UserFunction{
+	"acos": &common.UserFunction{
 		Name:  "acos",
 		Value: FuncAFRF(math.Acos),
 	},
-	"acosh": &tengo.UserFunction{
+	"acosh": &common.UserFunction{
 		Name:  "acosh",
 		Value: FuncAFRF(math.Acosh),
 	},
-	"asin": &tengo.UserFunction{
+	"asin": &common.UserFunction{
 		Name:  "asin",
 		Value: FuncAFRF(math.Asin),
 	},
-	"asinh": &tengo.UserFunction{
+	"asinh": &common.UserFunction{
 		Name:  "asinh",
 		Value: FuncAFRF(math.Asinh),
 	},
-	"atan": &tengo.UserFunction{
+	"atan": &common.UserFunction{
 		Name:  "atan",
 		Value: FuncAFRF(math.Atan),
 	},
-	"atan2": &tengo.UserFunction{
+	"atan2": &common.UserFunction{
 		Name:  "atan2",
 		Value: FuncAFFRF(math.Atan2),
 	},
-	"atanh": &tengo.UserFunction{
+	"atanh": &common.UserFunction{
 		Name:  "atanh",
 		Value: FuncAFRF(math.Atanh),
 	},
-	"cbrt": &tengo.UserFunction{
+	"cbrt": &common.UserFunction{
 		Name:  "cbrt",
 		Value: FuncAFRF(math.Cbrt),
 	},
-	"ceil": &tengo.UserFunction{
+	"ceil": &common.UserFunction{
 		Name:  "ceil",
 		Value: FuncAFRF(math.Ceil),
 	},
-	"copysign": &tengo.UserFunction{
+	"copysign": &common.UserFunction{
 		Name:  "copysign",
 		Value: FuncAFFRF(math.Copysign),
 	},
-	"cos": &tengo.UserFunction{
+	"cos": &common.UserFunction{
 		Name:  "cos",
 		Value: FuncAFRF(math.Cos),
 	},
-	"cosh": &tengo.UserFunction{
+	"cosh": &common.UserFunction{
 		Name:  "cosh",
 		Value: FuncAFRF(math.Cosh),
 	},
-	"dim": &tengo.UserFunction{
+	"dim": &common.UserFunction{
 		Name:  "dim",
 		Value: FuncAFFRF(math.Dim),
 	},
-	"erf": &tengo.UserFunction{
+	"erf": &common.UserFunction{
 		Name:  "erf",
 		Value: FuncAFRF(math.Erf),
 	},
-	"erfc": &tengo.UserFunction{
+	"erfc": &common.UserFunction{
 		Name:  "erfc",
 		Value: FuncAFRF(math.Erfc),
 	},
-	"exp": &tengo.UserFunction{
+	"exp": &common.UserFunction{
 		Name:  "exp",
 		Value: FuncAFRF(math.Exp),
 	},
-	"exp2": &tengo.UserFunction{
+	"exp2": &common.UserFunction{
 		Name:  "exp2",
 		Value: FuncAFRF(math.Exp2),
 	},
-	"expm1": &tengo.UserFunction{
+	"expm1": &common.UserFunction{
 		Name:  "expm1",
 		Value: FuncAFRF(math.Expm1),
 	},
-	"floor": &tengo.UserFunction{
+	"floor": &common.UserFunction{
 		Name:  "floor",
 		Value: FuncAFRF(math.Floor),
 	},
-	"gamma": &tengo.UserFunction{
+	"gamma": &common.UserFunction{
 		Name:  "gamma",
 		Value: FuncAFRF(math.Gamma),
 	},
-	"hypot": &tengo.UserFunction{
+	"hypot": &common.UserFunction{
 		Name:  "hypot",
 		Value: FuncAFFRF(math.Hypot),
 	},
-	"ilogb": &tengo.UserFunction{
+	"ilogb": &common.UserFunction{
 		Name:  "ilogb",
 		Value: FuncAFRI(math.Ilogb),
 	},
-	"inf": &tengo.UserFunction{
+	"inf": &common.UserFunction{
 		Name:  "inf",
 		Value: FuncAIRF(math.Inf),
 	},
-	"is_inf": &tengo.UserFunction{
+	"is_inf": &common.UserFunction{
 		Name:  "is_inf",
 		Value: FuncAFIRB(math.IsInf),
 	},
-	"is_nan": &tengo.UserFunction{
+	"is_nan": &common.UserFunction{
 		Name:  "is_nan",
 		Value: FuncAFRB(math.IsNaN),
 	},
-	"j0": &tengo.UserFunction{
+	"j0": &common.UserFunction{
 		Name:  "j0",
 		Value: FuncAFRF(math.J0),
 	},
-	"j1": &tengo.UserFunction{
+	"j1": &common.UserFunction{
 		Name:  "j1",
 		Value: FuncAFRF(math.J1),
 	},
-	"jn": &tengo.UserFunction{
+	"jn": &common.UserFunction{
 		Name:  "jn",
 		Value: FuncAIFRF(math.Jn),
 	},
-	"ldexp": &tengo.UserFunction{
+	"ldexp": &common.UserFunction{
 		Name:  "ldexp",
 		Value: FuncAFIRF(math.Ldexp),
 	},
-	"log": &tengo.UserFunction{
+	"log": &common.UserFunction{
 		Name:  "log",
 		Value: FuncAFRF(math.Log),
 	},
-	"log10": &tengo.UserFunction{
+	"log10": &common.UserFunction{
 		Name:  "log10",
 		Value: FuncAFRF(math.Log10),
 	},
-	"log1p": &tengo.UserFunction{
+	"log1p": &common.UserFunction{
 		Name:  "log1p",
 		Value: FuncAFRF(math.Log1p),
 	},
-	"log2": &tengo.UserFunction{
+	"log2": &common.UserFunction{
 		Name:  "log2",
 		Value: FuncAFRF(math.Log2),
 	},
-	"logb": &tengo.UserFunction{
+	"logb": &common.UserFunction{
 		Name:  "logb",
 		Value: FuncAFRF(math.Logb),
 	},
-	"max": &tengo.UserFunction{
+	"max": &common.UserFunction{
 		Name:  "max",
 		Value: FuncAFFRF(math.Max),
 	},
-	"min": &tengo.UserFunction{
+	"min": &common.UserFunction{
 		Name:  "min",
 		Value: FuncAFFRF(math.Min),
 	},
-	"mod": &tengo.UserFunction{
+	"mod": &common.UserFunction{
 		Name:  "mod",
 		Value: FuncAFFRF(math.Mod),
 	},
-	"nan": &tengo.UserFunction{
+	"nan": &common.UserFunction{
 		Name:  "nan",
 		Value: FuncARF(math.NaN),
 	},
-	"nextafter": &tengo.UserFunction{
+	"nextafter": &common.UserFunction{
 		Name:  "nextafter",
 		Value: FuncAFFRF(math.Nextafter),
 	},
-	"pow": &tengo.UserFunction{
+	"pow": &common.UserFunction{
 		Name:  "pow",
 		Value: FuncAFFRF(math.Pow),
 	},
-	"pow10": &tengo.UserFunction{
+	"pow10": &common.UserFunction{
 		Name:  "pow10",
 		Value: FuncAIRF(math.Pow10),
 	},
-	"remainder": &tengo.UserFunction{
+	"remainder": &common.UserFunction{
 		Name:  "remainder",
 		Value: FuncAFFRF(math.Remainder),
 	},
-	"signbit": &tengo.UserFunction{
+	"signbit": &common.UserFunction{
 		Name:  "signbit",
 		Value: FuncAFRB(math.Signbit),
 	},
-	"sin": &tengo.UserFunction{
+	"sin": &common.UserFunction{
 		Name:  "sin",
 		Value: FuncAFRF(math.Sin),
 	},
-	"sinh": &tengo.UserFunction{
+	"sinh": &common.UserFunction{
 		Name:  "sinh",
 		Value: FuncAFRF(math.Sinh),
 	},
-	"sqrt": &tengo.UserFunction{
+	"sqrt": &common.UserFunction{
 		Name:  "sqrt",
 		Value: FuncAFRF(math.Sqrt),
 	},
-	"tan": &tengo.UserFunction{
+	"tan": &common.UserFunction{
 		Name:  "tan",
 		Value: FuncAFRF(math.Tan),
 	},
-	"tanh": &tengo.UserFunction{
+	"tanh": &common.UserFunction{
 		Name:  "tanh",
 		Value: FuncAFRF(math.Tanh),
 	},
-	"trunc": &tengo.UserFunction{
+	"trunc": &common.UserFunction{
 		Name:  "trunc",
 		Value: FuncAFRF(math.Trunc),
 	},
-	"y0": &tengo.UserFunction{
+	"y0": &common.UserFunction{
 		Name:  "y0",
 		Value: FuncAFRF(math.Y0),
 	},
-	"y1": &tengo.UserFunction{
+	"y1": &common.UserFunction{
 		Name:  "y1",
 		Value: FuncAFRF(math.Y1),
 	},
-	"yn": &tengo.UserFunction{
+	"yn": &common.UserFunction{
 		Name:  "yn",
 		Value: FuncAIFRF(math.Yn),
 	},

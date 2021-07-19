@@ -12,11 +12,11 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/common"
 )
 
 // Decode parses the JSON-encoded data and returns the result object.
-func Decode(data []byte) (tengo.Object, error) {
+func Decode(data []byte) (common.Object, error) {
 	var d decodeState
 	err := checkValid(data, &d.scan)
 	if err != nil {
@@ -78,7 +78,7 @@ func (d *decodeState) scanWhile(op int) {
 	d.opcode = d.scan.eof()
 }
 
-func (d *decodeState) value() (tengo.Object, error) {
+func (d *decodeState) value() (common.Object, error) {
 	switch d.opcode {
 	default:
 		panic(phasePanicMsg)
@@ -101,8 +101,8 @@ func (d *decodeState) value() (tengo.Object, error) {
 	}
 }
 
-func (d *decodeState) array() (tengo.Object, error) {
-	var arr []tengo.Object
+func (d *decodeState) array() (common.Object, error) {
+	var arr []common.Object
 	for {
 		// Look ahead for ] - can only happen on first iteration.
 		d.scanWhile(scanSkipSpace)
@@ -126,11 +126,11 @@ func (d *decodeState) array() (tengo.Object, error) {
 			panic(phasePanicMsg)
 		}
 	}
-	return &tengo.Array{Value: arr}, nil
+	return &common.Array{Value: arr}, nil
 }
 
-func (d *decodeState) object() (tengo.Object, error) {
-	m := make(map[string]tengo.Object)
+func (d *decodeState) object() (common.Object, error) {
+	m := make(map[string]common.Object)
 	for {
 		// Read opening " of string key or closing }.
 		d.scanWhile(scanSkipSpace)
@@ -179,10 +179,10 @@ func (d *decodeState) object() (tengo.Object, error) {
 			panic(phasePanicMsg)
 		}
 	}
-	return &tengo.Map{Value: m}, nil
+	return &common.Map{Value: m}, nil
 }
 
-func (d *decodeState) literal() (tengo.Object, error) {
+func (d *decodeState) literal() (common.Object, error) {
 	// All bytes inside literal return scanContinue op code.
 	start := d.readIndex()
 	d.scanWhile(scanContinue)
@@ -191,27 +191,27 @@ func (d *decodeState) literal() (tengo.Object, error) {
 
 	switch c := item[0]; c {
 	case 'n': // null
-		return tengo.UndefinedValue, nil
+		return common.UndefinedValue, nil
 
 	case 't', 'f': // true, false
 		if c == 't' {
-			return tengo.TrueValue, nil
+			return common.TrueValue, nil
 		}
-		return tengo.FalseValue, nil
+		return common.FalseValue, nil
 
 	case '"': // string
 		s, ok := unquote(item)
 		if !ok {
 			panic(phasePanicMsg)
 		}
-		return &tengo.String{Value: s}, nil
+		return &common.String{Value: s}, nil
 
 	default: // number
 		if c != '-' && (c < '0' || c > '9') {
 			panic(phasePanicMsg)
 		}
 		n, _ := strconv.ParseFloat(string(item), 10)
-		return &tengo.Float{Value: n}, nil
+		return &common.Float{Value: n}, nil
 	}
 }
 
