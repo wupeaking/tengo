@@ -1,4 +1,4 @@
-package vm
+package vm_test
 
 import (
 	"errors"
@@ -10,11 +10,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/d5/tengo/v2/common"
 	"github.com/d5/tengo/v2/complier"
 	"github.com/d5/tengo/v2/parser"
 	"github.com/d5/tengo/v2/require"
 	"github.com/d5/tengo/v2/stdlib"
 	"github.com/d5/tengo/v2/token"
+	"github.com/d5/tengo/v2/vm"
 )
 
 const testOut = "out"
@@ -25,16 +27,16 @@ type MAP = map[string]interface{}
 type ARR = []interface{}
 
 type testopts struct {
-	modules     *complier.ModuleMap
-	symbols     map[string]complier.Object
+	modules     *common.ModuleMap
+	symbols     map[string]common.Object
 	maxAllocs   int64
 	skip2ndPass bool
 }
 
 func Opts() *testopts {
 	return &testopts{
-		modules:     complier.NewModuleMap(),
-		symbols:     make(map[string]complier.Object),
+		modules:     common.NewModuleMap(),
+		symbols:     make(map[string]common.Object),
 		maxAllocs:   -1,
 		skip2ndPass: false,
 	}
@@ -43,7 +45,7 @@ func Opts() *testopts {
 func (o *testopts) copy() *testopts {
 	c := &testopts{
 		modules:     o.modules.Copy(),
-		symbols:     make(map[string]complier.Object),
+		symbols:     make(map[string]common.Object),
 		maxAllocs:   o.maxAllocs,
 		skip2ndPass: o.skip2ndPass,
 	}
@@ -61,7 +63,7 @@ func (o *testopts) Stdlib() *testopts {
 func (o *testopts) Module(name string, mod interface{}) *testopts {
 	c := o.copy()
 	switch mod := mod.(type) {
-	case complier.Importable:
+	case common.Importable:
 		c.modules.Add(name, mod)
 	case string:
 		c.modules.AddSourceModule(name, []byte(mod))
@@ -73,7 +75,7 @@ func (o *testopts) Module(name string, mod interface{}) *testopts {
 	return c
 }
 
-func (o *testopts) Symbol(name string, value complier.Object) *testopts {
+func (o *testopts) Symbol(name string, value common.Object) *testopts {
 	c := o.copy()
 	c.symbols[name] = value
 	return c
@@ -133,9 +135,9 @@ func TestArray(t *testing.T) {
 	}
 
 	expectRun(t, fmt.Sprintf("%s[%d]", arrStr, -1),
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, fmt.Sprintf("%s[%d]", arrStr, arrLen),
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 
 	// slice operator
 	for low := 0; low < arrLen; low++ {
@@ -532,11 +534,11 @@ func() {
 }
 
 func TestUndefined(t *testing.T) {
-	expectRun(t, `out = undefined`, nil, complier.UndefinedValue)
-	expectRun(t, `out = undefined.a`, nil, complier.UndefinedValue)
-	expectRun(t, `out = undefined[1]`, nil, complier.UndefinedValue)
-	expectRun(t, `out = undefined.a.b`, nil, complier.UndefinedValue)
-	expectRun(t, `out = undefined[1][2]`, nil, complier.UndefinedValue)
+	expectRun(t, `out = undefined`, nil, common.UndefinedValue)
+	expectRun(t, `out = undefined.a`, nil, common.UndefinedValue)
+	expectRun(t, `out = undefined[1]`, nil, common.UndefinedValue)
+	expectRun(t, `out = undefined.a.b`, nil, common.UndefinedValue)
+	expectRun(t, `out = undefined[1][2]`, nil, common.UndefinedValue)
 	expectRun(t, `out = undefined ? 1 : 2`, nil, 2)
 	expectRun(t, `out = undefined == undefined`, nil, true)
 	expectRun(t, `out = undefined == 1`, nil, false)
@@ -574,14 +576,14 @@ func TestBuiltinFunction(t *testing.T) {
 	expectRun(t, `out = int(true)`, nil, 1)
 	expectRun(t, `out = int(false)`, nil, 0)
 	expectRun(t, `out = int('8')`, nil, 56)
-	expectRun(t, `out = int([1])`, nil, complier.UndefinedValue)
-	expectRun(t, `out = int({a: 1})`, nil, complier.UndefinedValue)
-	expectRun(t, `out = int(undefined)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = int([1])`, nil, common.UndefinedValue)
+	expectRun(t, `out = int({a: 1})`, nil, common.UndefinedValue)
+	expectRun(t, `out = int(undefined)`, nil, common.UndefinedValue)
 	expectRun(t, `out = int("-522", 1)`, nil, -522)
 	expectRun(t, `out = int(undefined, 1)`, nil, 1)
 	expectRun(t, `out = int(undefined, 1.8)`, nil, 1.8)
 	expectRun(t, `out = int(undefined, string(1))`, nil, "1")
-	expectRun(t, `out = int(undefined, undefined)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = int(undefined, undefined)`, nil, common.UndefinedValue)
 
 	expectRun(t, `out = string(1)`, nil, "1")
 	expectRun(t, `out = string(1.8)`, nil, "1.8")
@@ -591,40 +593,40 @@ func TestBuiltinFunction(t *testing.T) {
 	expectRun(t, `out = string('8')`, nil, "8")
 	expectRun(t, `out = string([1,8.1,true,3])`, nil, "[1, 8.1, true, 3]")
 	expectRun(t, `out = string({b: "foo"})`, nil, `{b: "foo"}`)
-	expectRun(t, `out = string(undefined)`, nil, complier.UndefinedValue) // not "undefined"
+	expectRun(t, `out = string(undefined)`, nil, common.UndefinedValue) // not "undefined"
 	expectRun(t, `out = string(1, "-522")`, nil, "1")
 	expectRun(t, `out = string(undefined, "-522")`, nil, "-522") // not "undefined"
 
 	expectRun(t, `out = float(1)`, nil, 1.0)
 	expectRun(t, `out = float(1.8)`, nil, 1.8)
 	expectRun(t, `out = float("-52.2")`, nil, -52.2)
-	expectRun(t, `out = float(true)`, nil, complier.UndefinedValue)
-	expectRun(t, `out = float(false)`, nil, complier.UndefinedValue)
-	expectRun(t, `out = float('8')`, nil, complier.UndefinedValue)
-	expectRun(t, `out = float([1,8.1,true,3])`, nil, complier.UndefinedValue)
-	expectRun(t, `out = float({a: 1, b: "foo"})`, nil, complier.UndefinedValue)
-	expectRun(t, `out = float(undefined)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = float(true)`, nil, common.UndefinedValue)
+	expectRun(t, `out = float(false)`, nil, common.UndefinedValue)
+	expectRun(t, `out = float('8')`, nil, common.UndefinedValue)
+	expectRun(t, `out = float([1,8.1,true,3])`, nil, common.UndefinedValue)
+	expectRun(t, `out = float({a: 1, b: "foo"})`, nil, common.UndefinedValue)
+	expectRun(t, `out = float(undefined)`, nil, common.UndefinedValue)
 	expectRun(t, `out = float("-52.2", 1.8)`, nil, -52.2)
 	expectRun(t, `out = float(undefined, 1)`, nil, 1)
 	expectRun(t, `out = float(undefined, 1.8)`, nil, 1.8)
 	expectRun(t, `out = float(undefined, "-52.2")`, nil, "-52.2")
 	expectRun(t, `out = float(undefined, char(56))`, nil, '8')
-	expectRun(t, `out = float(undefined, undefined)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = float(undefined, undefined)`, nil, common.UndefinedValue)
 
 	expectRun(t, `out = char(56)`, nil, '8')
-	expectRun(t, `out = char(1.8)`, nil, complier.UndefinedValue)
-	expectRun(t, `out = char("-52.2")`, nil, complier.UndefinedValue)
-	expectRun(t, `out = char(true)`, nil, complier.UndefinedValue)
-	expectRun(t, `out = char(false)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = char(1.8)`, nil, common.UndefinedValue)
+	expectRun(t, `out = char("-52.2")`, nil, common.UndefinedValue)
+	expectRun(t, `out = char(true)`, nil, common.UndefinedValue)
+	expectRun(t, `out = char(false)`, nil, common.UndefinedValue)
 	expectRun(t, `out = char('8')`, nil, '8')
-	expectRun(t, `out = char([1,8.1,true,3])`, nil, complier.UndefinedValue)
-	expectRun(t, `out = char({a: 1, b: "foo"})`, nil, complier.UndefinedValue)
-	expectRun(t, `out = char(undefined)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = char([1,8.1,true,3])`, nil, common.UndefinedValue)
+	expectRun(t, `out = char({a: 1, b: "foo"})`, nil, common.UndefinedValue)
+	expectRun(t, `out = char(undefined)`, nil, common.UndefinedValue)
 	expectRun(t, `out = char(56, 'a')`, nil, '8')
 	expectRun(t, `out = char(undefined, '8')`, nil, '8')
 	expectRun(t, `out = char(undefined, 56)`, nil, 56)
 	expectRun(t, `out = char(undefined, "-52.2")`, nil, "-52.2")
-	expectRun(t, `out = char(undefined, undefined)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = char(undefined, undefined)`, nil, common.UndefinedValue)
 
 	expectRun(t, `out = bool(1)`, nil, true)          // non-zero integer: true
 	expectRun(t, `out = bool(0)`, nil, false)         // zero: true
@@ -643,20 +645,20 @@ func TestBuiltinFunction(t *testing.T) {
 	expectRun(t, `out = bool(undefined)`, nil, false) // undefined: false
 
 	expectRun(t, `out = bytes(1)`, nil, []byte{0})
-	expectRun(t, `out = bytes(1.8)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = bytes(1.8)`, nil, common.UndefinedValue)
 	expectRun(t, `out = bytes("-522")`, nil, []byte{'-', '5', '2', '2'})
-	expectRun(t, `out = bytes(true)`, nil, complier.UndefinedValue)
-	expectRun(t, `out = bytes(false)`, nil, complier.UndefinedValue)
-	expectRun(t, `out = bytes('8')`, nil, complier.UndefinedValue)
-	expectRun(t, `out = bytes([1])`, nil, complier.UndefinedValue)
-	expectRun(t, `out = bytes({a: 1})`, nil, complier.UndefinedValue)
-	expectRun(t, `out = bytes(undefined)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = bytes(true)`, nil, common.UndefinedValue)
+	expectRun(t, `out = bytes(false)`, nil, common.UndefinedValue)
+	expectRun(t, `out = bytes('8')`, nil, common.UndefinedValue)
+	expectRun(t, `out = bytes([1])`, nil, common.UndefinedValue)
+	expectRun(t, `out = bytes({a: 1})`, nil, common.UndefinedValue)
+	expectRun(t, `out = bytes(undefined)`, nil, common.UndefinedValue)
 	expectRun(t, `out = bytes("-522", ['8'])`, nil, []byte{'-', '5', '2', '2'})
 	expectRun(t, `out = bytes(undefined, "-522")`, nil, "-522")
 	expectRun(t, `out = bytes(undefined, 1)`, nil, 1)
 	expectRun(t, `out = bytes(undefined, 1.8)`, nil, 1.8)
 	expectRun(t, `out = bytes(undefined, int("-522"))`, nil, -522)
-	expectRun(t, `out = bytes(undefined, undefined)`, nil, complier.UndefinedValue)
+	expectRun(t, `out = bytes(undefined, undefined)`, nil, common.UndefinedValue)
 
 	expectRun(t, `out = is_error(error(1))`, nil, true)
 	expectRun(t, `out = is_error(1)`, nil, false)
@@ -722,16 +724,16 @@ func TestBuiltinFunction(t *testing.T) {
 	expectRun(t, `out = format("%v", [1, [2, [3, 4]]])`,
 		nil, `[1, [2, [3, 4]]]`)
 
-	complier.MaxStringLen = 9
+	common.MaxStringLen = 9
 	expectError(t, `format("%s", "1234567890")`,
 		nil, "exceeding string size limit")
-	complier.MaxStringLen = 2147483647
+	common.MaxStringLen = 2147483647
 
 	// delete
-	expectError(t, `delete()`, nil, complier.ErrWrongNumArguments.Error())
-	expectError(t, `delete(1)`, nil, complier.ErrWrongNumArguments.Error())
-	expectError(t, `delete(1, 2, 3)`, nil, complier.ErrWrongNumArguments.Error())
-	expectError(t, `delete({}, "", 3)`, nil, complier.ErrWrongNumArguments.Error())
+	expectError(t, `delete()`, nil, common.ErrWrongNumArguments.Error())
+	expectError(t, `delete(1)`, nil, common.ErrWrongNumArguments.Error())
+	expectError(t, `delete(1, 2, 3)`, nil, common.ErrWrongNumArguments.Error())
+	expectError(t, `delete({}, "", 3)`, nil, common.ErrWrongNumArguments.Error())
 	expectError(t, `delete(1, 1)`, nil, `invalid type for argument 'first'`)
 	expectError(t, `delete(1.0, 1)`, nil, `invalid type for argument 'first'`)
 	expectError(t, `delete("str", 1)`, nil, `invalid type for argument 'first'`)
@@ -770,7 +772,7 @@ func TestBuiltinFunction(t *testing.T) {
 	expectError(t, `delete({}, immutable([]))`, nil,
 		`invalid type for argument 'second'`)
 
-	expectRun(t, `out = delete({}, "")`, nil, complier.UndefinedValue)
+	expectRun(t, `out = delete({}, "")`, nil, common.UndefinedValue)
 	expectRun(t, `out = {key1: 1}; delete(out, "key1")`, nil, MAP{})
 	expectRun(t, `out = {key1: 1, key2: "2"}; delete(out, "key1")`, nil,
 		MAP{"key2": "2"})
@@ -778,7 +780,7 @@ func TestBuiltinFunction(t *testing.T) {
 		ARR{1, "2", MAP{"a": "b"}})
 
 	// splice
-	expectError(t, `splice()`, nil, complier.ErrWrongNumArguments.Error())
+	expectError(t, `splice()`, nil, common.ErrWrongNumArguments.Error())
 	expectError(t, `splice(1)`, nil, `invalid type for argument 'first'`)
 	expectError(t, `splice(1.0)`, nil, `invalid type for argument 'first'`)
 	expectError(t, `splice("str")`, nil, `invalid type for argument 'first'`)
@@ -846,11 +848,11 @@ func TestBuiltinFunction(t *testing.T) {
 		`invalid type for argument 'third'`)
 	expectError(t, `splice([], 0, immutable({}))`, nil,
 		`invalid type for argument 'third'`)
-	expectError(t, `splice([], 1)`, nil, complier.ErrIndexOutOfBounds.Error())
+	expectError(t, `splice([], 1)`, nil, common.ErrIndexOutOfBounds.Error())
 	expectError(t, `splice([1, 2, 3], 0, -1)`, nil,
-		complier.ErrIndexOutOfBounds.Error())
+		common.ErrIndexOutOfBounds.Error())
 	expectError(t, `splice([1, 2, 3], 99, 0, "a", "b")`, nil,
-		complier.ErrIndexOutOfBounds.Error())
+		common.ErrIndexOutOfBounds.Error())
 	expectRun(t, `out = []; splice(out)`, nil, ARR{})
 	expectRun(t, `out = ["a"]; splice(out, 1)`, nil, ARR{"a"})
 	expectRun(t, `out = ["a"]; out = splice(out, 1)`, nil, ARR{})
@@ -896,15 +898,15 @@ func TestBuiltinFunction(t *testing.T) {
 }
 
 func TestBytesN(t *testing.T) {
-	curMaxBytesLen := complier.MaxBytesLen
-	defer func() { complier.MaxBytesLen = curMaxBytesLen }()
-	complier.MaxBytesLen = 10
+	curMaxBytesLen := common.MaxBytesLen
+	defer func() { common.MaxBytesLen = curMaxBytesLen }()
+	common.MaxBytesLen = 10
 
 	expectRun(t, `out = bytes(0)`, nil, make([]byte, 0))
 	expectRun(t, `out = bytes(10)`, nil, make([]byte, 10))
 	expectError(t, `bytes(11)`, nil, "bytes size limit")
 
-	complier.MaxBytesLen = 1000
+	common.MaxBytesLen = 1000
 	expectRun(t, `out = bytes(1000)`, nil, make([]byte, 1000))
 	expectError(t, `bytes(1001)`, nil, "bytes size limit")
 }
@@ -918,7 +920,7 @@ func TestBytes(t *testing.T) {
 	expectRun(t, `out = bytes("abcde")[0]`, nil, 97)
 	expectRun(t, `out = bytes("abcde")[1]`, nil, 98)
 	expectRun(t, `out = bytes("abcde")[4]`, nil, 101)
-	expectRun(t, `out = bytes("abcde")[10]`, nil, complier.UndefinedValue)
+	expectRun(t, `out = bytes("abcde")[10]`, nil, common.UndefinedValue)
 }
 
 func TestCall(t *testing.T) {
@@ -1094,17 +1096,17 @@ export func() {
 
 func TestVMErrorUnwrap(t *testing.T) {
 	userErr := errors.New("user runtime error")
-	userFunc := func(err error) *complier.UserFunction {
-		return &complier.UserFunction{Name: "user_func", Value: func(args ...complier.Object) (complier.Object, error) {
+	userFunc := func(err error) *common.UserFunction {
+		return &common.UserFunction{Name: "user_func", Value: func(args ...common.Object) (common.Object, error) {
 			return nil, err
 		}}
 	}
-	userModule := func(err error) *complier.BuiltinModule {
-		return &complier.BuiltinModule{
-			Attrs: map[string]complier.Object{
-				"afunction": &complier.UserFunction{
+	userModule := func(err error) *common.BuiltinModule {
+		return &common.BuiltinModule{
+			Attrs: map[string]common.Object{
+				"afunction": &common.UserFunction{
 					Name: "afunction",
-					Value: func(a ...complier.Object) (complier.Object, error) {
+					Value: func(a ...common.Object) (common.Object, error) {
 						return nil, err
 					},
 				},
@@ -1462,11 +1464,11 @@ func TestFor(t *testing.T) {
 func TestFunction(t *testing.T) {
 	// function with no "return" statement returns "invalid" value.
 	expectRun(t, `f1 := func() {}; out = f1();`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, `f1 := func() {}; f2 := func() { return f1(); }; f1(); out = f2();`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, `f := func(x) { x; }; out = f(5);`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 
 	expectRun(t, `f := func(...x) { return x; }; out = f(1,2,3);`,
 		nil, ARR{1, 2, 3})
@@ -1478,7 +1480,7 @@ func TestFunction(t *testing.T) {
 		nil, ARR{"a", ARR{"b"}, 7})
 
 	expectRun(t, `f := func(...x) { return x; }; out = f();`,
-		nil, &complier.Array{Value: []complier.Object{}})
+		nil, &common.Array{Value: []common.Object{}})
 
 	expectRun(t, `f := func(a, b, ...x) { return [a, b, x]; }; out = f(8, 9);`,
 		nil, ARR{8, 9, ARR{}})
@@ -1775,23 +1777,23 @@ func() {
 
 	// function skipping return
 	expectRun(t, `out = func() {}()`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, `out = func(v) { if v { return true } }(1)`,
 		nil, true)
 	expectRun(t, `out = func(v) { if v { return true } }(0)`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, `out = func(v) { if v { } else { return true } }(1)`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, `out = func(v) { if v { return } }(1)`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, `out = func(v) { if v { return } }(0)`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, `out = func(v) { if v { } else { return } }(1)`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, `out = func(v) { for ;;v++ { if v == 3 { return true } } }(1)`,
 		nil, true)
 	expectRun(t, `out = func(v) { for ;;v++ { if v == 3 { break } } }(1)`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 
 	// 'f' in RHS at line 4 must reference global variable 'f'
 	// See https://github.com/d5/tengo/issues/314
@@ -1892,12 +1894,12 @@ for x in [1, 2, 3] {
 func TestIf(t *testing.T) {
 
 	expectRun(t, `if (true) { out = 10 }`, nil, 10)
-	expectRun(t, `if (false) { out = 10 }`, nil, complier.UndefinedValue)
+	expectRun(t, `if (false) { out = 10 }`, nil, common.UndefinedValue)
 	expectRun(t, `if (false) { out = 10 } else { out = 20 }`, nil, 20)
 	expectRun(t, `if (1) { out = 10 }`, nil, 10)
 	expectRun(t, `if (0) { out = 10 } else { out = 20 }`, nil, 20)
 	expectRun(t, `if (1 < 2) { out = 10 }`, nil, 10)
-	expectRun(t, `if (1 > 2) { out = 10 }`, nil, complier.UndefinedValue)
+	expectRun(t, `if (1 > 2) { out = 10 }`, nil, common.UndefinedValue)
 	expectRun(t, `if (1 < 2) { out = 10 } else { out = 20 }`, nil, 10)
 	expectRun(t, `if (1 > 2) { out = 10 } else { out = 20 }`, nil, 20)
 
@@ -2037,7 +2039,7 @@ func TestImmutable(t *testing.T) {
 	expectRun(t, `a := immutable([1,2,3]); a = 5; out = a`,
 		nil, 5)
 	expectRun(t, `a := immutable([1, 2, 3]); out = a[5]`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 
 	// map
 	expectError(t, `a := immutable({b: 1, c: 2}); a.b = 5`,
@@ -2069,7 +2071,7 @@ func TestImmutable(t *testing.T) {
 	expectRun(t, `a := immutable({a:1,b:2}); a = 5; out = 5`,
 		nil, 5)
 	expectRun(t, `a := immutable({a:1,b:2}); out = a.c`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 
 	expectRun(t, `a := immutable({b: 5, c: "foo"}); out = a.b`,
 		nil, 5)
@@ -2094,7 +2096,7 @@ func TestIncDec(t *testing.T) {
 }
 
 type StringDict struct {
-	complier.ObjectImpl
+	common.ObjectImpl
 	Value map[string]string
 }
 
@@ -2104,30 +2106,30 @@ func (o *StringDict) TypeName() string {
 	return "string-dict"
 }
 
-func (o *StringDict) IndexGet(index complier.Object) (complier.Object, error) {
-	strIdx, ok := index.(*complier.String)
+func (o *StringDict) IndexGet(index common.Object) (common.Object, error) {
+	strIdx, ok := index.(*common.String)
 	if !ok {
-		return nil, complier.ErrInvalidIndexType
+		return nil, common.ErrInvalidIndexType
 	}
 
 	for k, v := range o.Value {
 		if strings.EqualFold(strIdx.Value, k) {
-			return &complier.String{Value: v}, nil
+			return &common.String{Value: v}, nil
 		}
 	}
 
-	return complier.UndefinedValue, nil
+	return common.UndefinedValue, nil
 }
 
-func (o *StringDict) IndexSet(index, value complier.Object) error {
-	strIdx, ok := index.(*complier.String)
+func (o *StringDict) IndexSet(index, value common.Object) error {
+	strIdx, ok := index.(*common.String)
 	if !ok {
-		return complier.ErrInvalidIndexType
+		return common.ErrInvalidIndexType
 	}
 
-	strVal, ok := complier.ToString(value)
+	strVal, ok := common.ToString(value)
 	if !ok {
-		return complier.ErrInvalidIndexValueType
+		return common.ErrInvalidIndexValueType
 	}
 
 	o.Value[strings.ToLower(strIdx.Value)] = strVal
@@ -2136,7 +2138,7 @@ func (o *StringDict) IndexSet(index, value complier.Object) error {
 }
 
 type StringCircle struct {
-	complier.ObjectImpl
+	common.ObjectImpl
 	Value []string
 }
 
@@ -2148,10 +2150,10 @@ func (o *StringCircle) String() string {
 	return ""
 }
 
-func (o *StringCircle) IndexGet(index complier.Object) (complier.Object, error) {
-	intIdx, ok := index.(*complier.Int)
+func (o *StringCircle) IndexGet(index common.Object) (common.Object, error) {
+	intIdx, ok := index.(*common.Int)
 	if !ok {
-		return nil, complier.ErrInvalidIndexType
+		return nil, common.ErrInvalidIndexType
 	}
 
 	r := int(intIdx.Value) % len(o.Value)
@@ -2159,13 +2161,13 @@ func (o *StringCircle) IndexGet(index complier.Object) (complier.Object, error) 
 		r = len(o.Value) + r
 	}
 
-	return &complier.String{Value: o.Value[r]}, nil
+	return &common.String{Value: o.Value[r]}, nil
 }
 
-func (o *StringCircle) IndexSet(index, value complier.Object) error {
-	intIdx, ok := index.(*complier.Int)
+func (o *StringCircle) IndexSet(index, value common.Object) error {
+	intIdx, ok := index.(*common.Int)
 	if !ok {
-		return complier.ErrInvalidIndexType
+		return common.ErrInvalidIndexType
 	}
 
 	r := int(intIdx.Value) % len(o.Value)
@@ -2173,9 +2175,9 @@ func (o *StringCircle) IndexSet(index, value complier.Object) error {
 		r = len(o.Value) + r
 	}
 
-	strVal, ok := complier.ToString(value)
+	strVal, ok := common.ToString(value)
 	if !ok {
-		return complier.ErrInvalidIndexValueType
+		return common.ErrInvalidIndexValueType
 	}
 
 	o.Value[r] = strVal
@@ -2184,7 +2186,7 @@ func (o *StringCircle) IndexSet(index, value complier.Object) error {
 }
 
 type StringArray struct {
-	complier.ObjectImpl
+	common.ObjectImpl
 	Value []string
 }
 
@@ -2194,8 +2196,8 @@ func (o *StringArray) String() string {
 
 func (o *StringArray) BinaryOp(
 	op token.Token,
-	rhs complier.Object,
-) (complier.Object, error) {
+	rhs common.Object,
+) (common.Object, error) {
 	if rhs, ok := rhs.(*StringArray); ok {
 		switch op {
 		case token.Add:
@@ -2206,14 +2208,14 @@ func (o *StringArray) BinaryOp(
 		}
 	}
 
-	return nil, complier.ErrInvalidOperator
+	return nil, common.ErrInvalidOperator
 }
 
 func (o *StringArray) IsFalsy() bool {
 	return len(o.Value) == 0
 }
 
-func (o *StringArray) Equals(x complier.Object) bool {
+func (o *StringArray) Equals(x common.Object) bool {
 	if x, ok := x.(*StringArray); ok {
 		if len(o.Value) != len(x.Value) {
 			return false
@@ -2231,7 +2233,7 @@ func (o *StringArray) Equals(x complier.Object) bool {
 	return false
 }
 
-func (o *StringArray) Copy() complier.Object {
+func (o *StringArray) Copy() common.Object {
 	return &StringArray{
 		Value: append([]string{}, o.Value...),
 	}
@@ -2241,59 +2243,59 @@ func (o *StringArray) TypeName() string {
 	return "string-array"
 }
 
-func (o *StringArray) IndexGet(index complier.Object) (complier.Object, error) {
-	intIdx, ok := index.(*complier.Int)
+func (o *StringArray) IndexGet(index common.Object) (common.Object, error) {
+	intIdx, ok := index.(*common.Int)
 	if ok {
 		if intIdx.Value >= 0 && intIdx.Value < int64(len(o.Value)) {
-			return &complier.String{Value: o.Value[intIdx.Value]}, nil
+			return &common.String{Value: o.Value[intIdx.Value]}, nil
 		}
 
-		return nil, complier.ErrIndexOutOfBounds
+		return nil, common.ErrIndexOutOfBounds
 	}
 
-	strIdx, ok := index.(*complier.String)
+	strIdx, ok := index.(*common.String)
 	if ok {
 		for vidx, str := range o.Value {
 			if strIdx.Value == str {
-				return &complier.Int{Value: int64(vidx)}, nil
+				return &common.Int{Value: int64(vidx)}, nil
 			}
 		}
 
-		return complier.UndefinedValue, nil
+		return common.UndefinedValue, nil
 	}
 
-	return nil, complier.ErrInvalidIndexType
+	return nil, common.ErrInvalidIndexType
 }
 
-func (o *StringArray) IndexSet(index, value complier.Object) error {
-	strVal, ok := complier.ToString(value)
+func (o *StringArray) IndexSet(index, value common.Object) error {
+	strVal, ok := common.ToString(value)
 	if !ok {
-		return complier.ErrInvalidIndexValueType
+		return common.ErrInvalidIndexValueType
 	}
 
-	intIdx, ok := index.(*complier.Int)
+	intIdx, ok := index.(*common.Int)
 	if ok {
 		if intIdx.Value >= 0 && intIdx.Value < int64(len(o.Value)) {
 			o.Value[intIdx.Value] = strVal
 			return nil
 		}
 
-		return complier.ErrIndexOutOfBounds
+		return common.ErrIndexOutOfBounds
 	}
 
-	return complier.ErrInvalidIndexType
+	return common.ErrInvalidIndexType
 }
 
 func (o *StringArray) Call(
-	args ...complier.Object,
-) (ret complier.Object, err error) {
+	args ...common.Object,
+) (ret common.Object, err error) {
 	if len(args) != 1 {
-		return nil, complier.ErrWrongNumArguments
+		return nil, common.ErrWrongNumArguments
 	}
 
-	s1, ok := complier.ToString(args[0])
+	s1, ok := common.ToString(args[0])
 	if !ok {
-		return nil, complier.ErrInvalidArgumentType{
+		return nil, common.ErrInvalidArgumentType{
 			Name:     "first",
 			Expected: "string(compatible)",
 			Found:    args[0].TypeName(),
@@ -2302,11 +2304,11 @@ func (o *StringArray) Call(
 
 	for i, v := range o.Value {
 		if v == s1 {
-			return &complier.Int{Value: int64(i)}, nil
+			return &common.Int{Value: int64(i)}, nil
 		}
 	}
 
-	return complier.UndefinedValue, nil
+	return common.UndefinedValue, nil
 }
 
 func (o *StringArray) CanCall() bool {
@@ -2322,7 +2324,7 @@ func TestIndexable(t *testing.T) {
 	expectRun(t, `out = dict["B"]`,
 		Opts().Symbol("dict", dict()).Skip2ndPass(), "bar")
 	expectRun(t, `out = dict["x"]`,
-		Opts().Symbol("dict", dict()).Skip2ndPass(), complier.UndefinedValue)
+		Opts().Symbol("dict", dict()).Skip2ndPass(), common.UndefinedValue)
 	expectError(t, `dict[0]`,
 		Opts().Symbol("dict", dict()).Skip2ndPass(), "invalid index type")
 
@@ -2350,7 +2352,7 @@ func TestIndexable(t *testing.T) {
 	expectRun(t, `out = arr["three"]`,
 		Opts().Symbol("arr", strArr()).Skip2ndPass(), 2)
 	expectRun(t, `out = arr["four"]`,
-		Opts().Symbol("arr", strArr()).Skip2ndPass(), complier.UndefinedValue)
+		Opts().Symbol("arr", strArr()).Skip2ndPass(), common.UndefinedValue)
 	expectRun(t, `out = arr[0]`,
 		Opts().Symbol("arr", strArr()).Skip2ndPass(), "one")
 	expectRun(t, `out = arr[1]`,
@@ -2423,7 +2425,7 @@ func TestInteger(t *testing.T) {
 }
 
 type StringArrayIterator struct {
-	complier.ObjectImpl
+	common.ObjectImpl
 	strArr *StringArray
 	idx    int
 }
@@ -2441,15 +2443,15 @@ func (i *StringArrayIterator) Next() bool {
 	return i.idx <= len(i.strArr.Value)
 }
 
-func (i *StringArrayIterator) Key() complier.Object {
-	return &complier.Int{Value: int64(i.idx - 1)}
+func (i *StringArrayIterator) Key() common.Object {
+	return &common.Int{Value: int64(i.idx - 1)}
 }
 
-func (i *StringArrayIterator) Value() complier.Object {
-	return &complier.String{Value: i.strArr.Value[i.idx-1]}
+func (i *StringArrayIterator) Value() common.Object {
+	return &common.String{Value: i.strArr.Value[i.idx-1]}
 }
 
-func (o *StringArray) Iterate() complier.Iterator {
+func (o *StringArray) Iterate() common.Iterator {
 	return &StringArrayIterator{
 		strArr: o,
 	}
@@ -2541,9 +2543,9 @@ out = {
 	})
 
 	expectRun(t, `out = {foo: 5}["foo"]`, nil, 5)
-	expectRun(t, `out = {foo: 5}["bar"]`, nil, complier.UndefinedValue)
+	expectRun(t, `out = {foo: 5}["bar"]`, nil, common.UndefinedValue)
 	expectRun(t, `key := "foo"; out = {foo: 5}[key]`, nil, 5)
-	expectRun(t, `out = {}["foo"]`, nil, complier.UndefinedValue)
+	expectRun(t, `out = {}["foo"]`, nil, common.UndefinedValue)
 
 	expectRun(t, `
 m := {
@@ -2567,13 +2569,13 @@ out = m["foo"](2) + m["foo"](3)
 
 func TestBuiltin(t *testing.T) {
 	m := Opts().Module("math",
-		&complier.BuiltinModule{
-			Attrs: map[string]complier.Object{
-				"abs": &complier.UserFunction{
+		&common.BuiltinModule{
+			Attrs: map[string]common.Object{
+				"abs": &common.UserFunction{
 					Name: "abs",
-					Value: func(a ...complier.Object) (complier.Object, error) {
-						v, _ := complier.ToFloat64(a[0])
-						return &complier.Float{Value: math.Abs(v)}, nil
+					Value: func(a ...common.Object) (common.Object, error) {
+						v, _ := common.ToFloat64(a[0])
+						return &common.Float{Value: math.Abs(v)}, nil
 					},
 				},
 			},
@@ -2590,7 +2592,7 @@ func TestUserModules(t *testing.T) {
 	// export none
 	expectRun(t, `out = import("mod1")`,
 		Opts().Module("mod1", `fn := func() { return 5.0 }; a := 2`),
-		complier.UndefinedValue)
+		common.UndefinedValue)
 
 	// export values
 	expectRun(t, `out = import("mod1")`,
@@ -2735,21 +2737,21 @@ export func(a) {
 
 	// module skipping export
 	expectRun(t, `out = import("mod0")`,
-		Opts().Module("mod0", ``), complier.UndefinedValue)
+		Opts().Module("mod0", ``), common.UndefinedValue)
 	expectRun(t, `out = import("mod0")`,
 		Opts().Module("mod0", `if 1 { export true }`), true)
 	expectRun(t, `out = import("mod0")`,
 		Opts().Module("mod0", `if 0 { export true }`),
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	expectRun(t, `out = import("mod0")`,
 		Opts().Module("mod0", `if 1 { } else { export true }`),
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	expectRun(t, `out = import("mod0")`,
 		Opts().Module("mod0", `for v:=0;;v++ { if v == 3 { export true } } }`),
 		true)
 	expectRun(t, `out = import("mod0")`,
 		Opts().Module("mod0", `for v:=0;;v++ { if v == 3 { break } } }`),
-		complier.UndefinedValue)
+		common.UndefinedValue)
 
 	// duplicate compiled functions
 	// NOTE: module "mod" has a function with some local variable, and it's
@@ -2773,13 +2775,13 @@ export { x: 1 }
 
 func TestModuleBlockScopes(t *testing.T) {
 	m := Opts().Module("rand",
-		&complier.BuiltinModule{
-			Attrs: map[string]complier.Object{
-				"intn": &complier.UserFunction{
+		&common.BuiltinModule{
+			Attrs: map[string]common.Object{
+				"intn": &common.UserFunction{
 					Name: "abs",
-					Value: func(a ...complier.Object) (complier.Object, error) {
-						v, _ := complier.ToInt64(a[0])
-						return &complier.Int{Value: rand.Int63n(v)}, nil
+					Value: func(a ...common.Object) (common.Object, error) {
+						v, _ := common.ToInt64(a[0])
+						return &common.Int{Value: rand.Int63n(v)}, nil
 					},
 				},
 			},
@@ -2860,11 +2862,11 @@ f()
 
 func testAllocsLimit(t *testing.T, src string, limit int64) {
 	expectRun(t, src,
-		Opts().Skip2ndPass(), complier.UndefinedValue) // no limit
+		Opts().Skip2ndPass(), common.UndefinedValue) // no limit
 	expectRun(t, src,
-		Opts().MaxAllocs(limit).Skip2ndPass(), complier.UndefinedValue)
+		Opts().MaxAllocs(limit).Skip2ndPass(), common.UndefinedValue)
 	expectRun(t, src,
-		Opts().MaxAllocs(limit+1).Skip2ndPass(), complier.UndefinedValue)
+		Opts().MaxAllocs(limit+1).Skip2ndPass(), common.UndefinedValue)
 	if limit > 1 {
 		expectError(t, src,
 			Opts().MaxAllocs(limit-1).Skip2ndPass(),
@@ -3002,7 +3004,7 @@ func TestSelector(t *testing.T) {
 	expectRun(t, `a := {k1: 5, k2: "foo"}; out = a.k2`,
 		nil, "foo")
 	expectRun(t, `a := {k1: 5, k2: "foo"}; out = a.k3`,
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 
 	expectRun(t, `
 a := {
@@ -3022,7 +3024,7 @@ a := {
 	},
 	c: "foo bar"
 }
-b := a.x.c`, nil, complier.UndefinedValue)
+b := a.x.c`, nil, common.UndefinedValue)
 
 	expectRun(t, `
 a := {
@@ -3032,7 +3034,7 @@ a := {
 	},
 	c: "foo bar"
 }
-b := a.x.y`, nil, complier.UndefinedValue)
+b := a.x.y`, nil, common.UndefinedValue)
 
 	expectRun(t, `a := {b: 1, c: "foo"}; a.b = 2; out = a.b`,
 		nil, 2)
@@ -3124,9 +3126,9 @@ func TestSourceModules(t *testing.T) {
 	testEnumModule(t, `out = enum.all({a:true, b:0}, enum.value)`, false)
 	testEnumModule(t, `out = enum.all({a:true, b:0, c:1}, enum.value)`, false)
 	testEnumModule(t, `out = enum.all(0, enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 	testEnumModule(t, `out = enum.all("123", enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 
 	testEnumModule(t, `out = enum.any([], enum.value)`, false)
 	testEnumModule(t, `out = enum.any([1], enum.value)`, true)
@@ -3147,9 +3149,9 @@ func TestSourceModules(t *testing.T) {
 	testEnumModule(t, `out = enum.any({a:false}, enum.value)`, false)
 	testEnumModule(t, `out = enum.any({a:false, b:0}, enum.value)`, false)
 	testEnumModule(t, `out = enum.any(0, enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 	testEnumModule(t, `out = enum.any("123", enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 
 	testEnumModule(t, `out = enum.chunk([], 1)`, ARR{})
 	testEnumModule(t, `out = enum.chunk([1], 1)`, ARR{ARR{1}})
@@ -3164,30 +3166,30 @@ func TestSourceModules(t *testing.T) {
 	testEnumModule(t, `out = enum.chunk([1,2,3,4], 3)`,
 		ARR{ARR{1, 2, 3}, ARR{4}})
 	testEnumModule(t, `out = enum.chunk([], 0)`,
-		complier.UndefinedValue) // size=0: undefined
+		common.UndefinedValue) // size=0: undefined
 	testEnumModule(t, `out = enum.chunk([1], 0)`,
-		complier.UndefinedValue) // size=0: undefined
+		common.UndefinedValue) // size=0: undefined
 	testEnumModule(t, `out = enum.chunk([1,2,3], 0)`,
-		complier.UndefinedValue) // size=0: undefined
+		common.UndefinedValue) // size=0: undefined
 	testEnumModule(t, `out = enum.chunk({a:1,b:2,c:3}, 1)`,
-		complier.UndefinedValue) // map: undefined
+		common.UndefinedValue) // map: undefined
 	testEnumModule(t, `out = enum.chunk(0, 1)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 	testEnumModule(t, `out = enum.chunk("123", 1)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 
 	testEnumModule(t, `out = enum.at([], 0)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at([], 1)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at([], -1)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at(["one"], 0)`,
 		"one")
 	testEnumModule(t, `out = enum.at(["one"], 1)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at(["one"], -1)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at(["one","two","three"], 0)`,
 		"one")
 	testEnumModule(t, `out = enum.at(["one","two","three"], 1)`,
@@ -3195,17 +3197,17 @@ func TestSourceModules(t *testing.T) {
 	testEnumModule(t, `out = enum.at(["one","two","three"], 2)`,
 		"three")
 	testEnumModule(t, `out = enum.at(["one","two","three"], -1)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at(["one","two","three"], 3)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at(["one","two","three"], "1")`,
-		complier.UndefinedValue) // non-int index: undefined
+		common.UndefinedValue) // non-int index: undefined
 	testEnumModule(t, `out = enum.at({}, "a")`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at({a:"one"}, "a")`,
 		"one")
 	testEnumModule(t, `out = enum.at({a:"one"}, "b")`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at({a:"one",b:"two",c:"three"}, "a")`,
 		"one")
 	testEnumModule(t, `out = enum.at({a:"one",b:"two",c:"three"}, "b")`,
@@ -3213,13 +3215,13 @@ func TestSourceModules(t *testing.T) {
 	testEnumModule(t, `out = enum.at({a:"one",b:"two",c:"three"}, "c")`,
 		"three")
 	testEnumModule(t, `out = enum.at({a:"one",b:"two",c:"three"}, "d")`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.at({a:"one",b:"two",c:"three"}, 'a')`,
-		complier.UndefinedValue) // non-string index: undefined
+		common.UndefinedValue) // non-string index: undefined
 	testEnumModule(t, `out = enum.at(0, 1)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 	testEnumModule(t, `out = enum.at("abc", 1)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 
 	testEnumModule(t, `out=0; enum.each([],func(k,v){out+=v})`, 0)
 	testEnumModule(t, `out=0; enum.each([1,2,3],func(k,v){out+=v})`, 6)
@@ -3237,53 +3239,53 @@ func TestSourceModules(t *testing.T) {
 	testEnumModule(t, `out = enum.filter([false,1,0,2], enum.value)`,
 		ARR{1, 2})
 	testEnumModule(t, `out = enum.filter({}, enum.value)`,
-		complier.UndefinedValue) // non-array: undefined
+		common.UndefinedValue) // non-array: undefined
 	testEnumModule(t, `out = enum.filter(0, enum.value)`,
-		complier.UndefinedValue) // non-array: undefined
+		common.UndefinedValue) // non-array: undefined
 	testEnumModule(t, `out = enum.filter("123", enum.value)`,
-		complier.UndefinedValue) // non-array: undefined
+		common.UndefinedValue) // non-array: undefined
 
 	testEnumModule(t, `out = enum.find([], enum.value)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.find([0], enum.value)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.find([1], enum.value)`, 1)
 	testEnumModule(t, `out = enum.find([false,0,undefined,1], enum.value)`, 1)
 	testEnumModule(t, `out = enum.find([1,2,3], enum.value)`, 1)
 	testEnumModule(t, `out = enum.find({}, enum.value)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.find({a:0}, enum.value)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.find({a:1}, enum.value)`, 1)
 	testEnumModule(t, `out = enum.find({a:false,b:0,c:undefined,d:1}, enum.value)`,
 		1)
 	//testEnumModule(t, `out = enum.find({a:1,b:2,c:3}, enum.value)`, 1)
 	testEnumModule(t, `out = enum.find(0, enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 	testEnumModule(t, `out = enum.find("123", enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 
 	testEnumModule(t, `out = enum.find_key([], enum.value)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.find_key([0], enum.value)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.find_key([1], enum.value)`, 0)
 	testEnumModule(t, `out = enum.find_key([false,0,undefined,1], enum.value)`,
 		3)
 	testEnumModule(t, `out = enum.find_key([1,2,3], enum.value)`, 0)
 	testEnumModule(t, `out = enum.find_key({}, enum.value)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.find_key({a:0}, enum.value)`,
-		complier.UndefinedValue)
+		common.UndefinedValue)
 	testEnumModule(t, `out = enum.find_key({a:1}, enum.value)`,
 		"a")
 	testEnumModule(t, `out = enum.find_key({a:false,b:0,c:undefined,d:1}, enum.value)`,
 		"d")
 	//testEnumModule(t, `out = enum.find_key({a:1,b:2,c:3}, enum.value)`, "a")
 	testEnumModule(t, `out = enum.find_key(0, enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 	testEnumModule(t, `out = enum.find_key("123", enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 
 	testEnumModule(t, `out = enum.map([], enum.value)`,
 		ARR{})
@@ -3298,9 +3300,9 @@ func TestSourceModules(t *testing.T) {
 	testEnumModule(t, `out = enum.map({a:1}, func(k,v) { return v*2 })`,
 		ARR{2})
 	testEnumModule(t, `out = enum.map(0, enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 	testEnumModule(t, `out = enum.map("123", enum.value)`,
-		complier.UndefinedValue) // non-enumerable: undefined
+		common.UndefinedValue) // non-enumerable: undefined
 }
 
 func testEnumModule(t *testing.T, input string, expected interface{}) {
@@ -3394,9 +3396,9 @@ func TestString(t *testing.T) {
 	}
 
 	expectRun(t, fmt.Sprintf("%s[%d]", strStr, -1),
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 	expectRun(t, fmt.Sprintf("%s[%d]", strStr, strLen),
-		nil, complier.UndefinedValue)
+		nil, common.UndefinedValue)
 
 	// slice operator
 	for low := 0; low <= strLen; low++ {
@@ -3642,7 +3644,7 @@ func expectRun(
 	expectedObj := toObject(expected)
 
 	if symbols == nil {
-		symbols = make(map[string]complier.Object)
+		symbols = make(map[string]common.Object)
 	}
 	symbols[testOut] = objectZeroCopy(expectedObj)
 
@@ -3670,10 +3672,10 @@ func expectRun(
 
 		expectedObj := toObject(expected)
 		switch eo := expectedObj.(type) {
-		case *complier.Array:
-			expectedObj = &complier.ImmutableArray{Value: eo.Value}
-		case *complier.Map:
-			expectedObj = &complier.ImmutableMap{Value: eo.Value}
+		case *common.Array:
+			expectedObj = &common.ImmutableArray{Value: eo.Value}
+		case *common.Map:
+			expectedObj = &common.ImmutableMap{Value: eo.Value}
 		}
 
 		modules.AddSourceModule("__code__",
@@ -3784,11 +3786,11 @@ func (o *vmTracer) Write(p []byte) (n int, err error) {
 
 func traceCompileRun(
 	file *parser.File,
-	symbols map[string]complier.Object,
-	modules *complier.ModuleMap,
+	symbols map[string]common.Object,
+	modules *common.ModuleMap,
 	maxAllocs int64,
-) (res map[string]complier.Object, trace []string, err error) {
-	var v *complier.VM
+) (res map[string]common.Object, trace []string, err error) {
+	var v *vm.VM
 
 	defer func() {
 		if e := recover(); e != nil {
@@ -3811,7 +3813,7 @@ func traceCompileRun(
 		}
 	}()
 
-	globals := make([]complier.Object, complier.GlobalsSize)
+	globals := make([]common.Object, common.GlobalsSize)
 
 	symTable := complier.NewSymbolTable()
 	for name, value := range symbols {
@@ -3822,7 +3824,7 @@ func traceCompileRun(
 		valueCopy := value
 		globals[sym.Index] = valueCopy
 	}
-	for idx, fn := range complier.GetAllBuiltinFunctions() {
+	for idx, fn := range common.GetAllBuiltinFunctions() {
 		symTable.DefineBuiltin(idx, fn.Name)
 	}
 
@@ -3843,11 +3845,11 @@ func traceCompileRun(
 	trace = append(trace, fmt.Sprintf("\n[Compiled Instructions]\n\n%s\n",
 		strings.Join(bytecode.FormatInstructions(), "\n")))
 
-	v = complier.NewVM(bytecode, globals, maxAllocs)
+	v = vm.NewVM(bytecode, globals, maxAllocs)
 
 	err = v.Run()
 	{
-		res = make(map[string]complier.Object)
+		res = make(map[string]common.Object)
 		for name := range symbols {
 			sym, depth, ok := symTable.Resolve(name, false)
 			if !ok || depth != 0 {
@@ -3867,7 +3869,7 @@ func traceCompileRun(
 	return
 }
 
-func formatGlobals(globals []complier.Object) (formatted []string) {
+func formatGlobals(globals []common.Object) (formatted []string) {
 	for idx, global := range globals {
 		if global == nil {
 			return
@@ -3888,92 +3890,92 @@ func parse(t *testing.T, input string) *parser.File {
 	return file
 }
 
-func errorObject(v interface{}) *complier.Error {
-	return &complier.Error{Value: toObject(v)}
+func errorObject(v interface{}) *common.Error {
+	return &common.Error{Value: toObject(v)}
 }
 
-func toObject(v interface{}) complier.Object {
+func toObject(v interface{}) common.Object {
 	switch v := v.(type) {
-	case complier.Object:
+	case common.Object:
 		return v
 	case string:
-		return &complier.String{Value: v}
+		return &common.String{Value: v}
 	case int64:
-		return &complier.Int{Value: v}
+		return &common.Int{Value: v}
 	case int: // for convenience
-		return &complier.Int{Value: int64(v)}
+		return &common.Int{Value: int64(v)}
 	case bool:
 		if v {
-			return complier.TrueValue
+			return common.TrueValue
 		}
-		return complier.FalseValue
+		return common.FalseValue
 	case rune:
-		return &complier.Char{Value: v}
+		return &common.Char{Value: v}
 	case byte: // for convenience
-		return &complier.Char{Value: rune(v)}
+		return &common.Char{Value: rune(v)}
 	case float64:
-		return &complier.Float{Value: v}
+		return &common.Float{Value: v}
 	case []byte:
-		return &complier.Bytes{Value: v}
+		return &common.Bytes{Value: v}
 	case MAP:
-		objs := make(map[string]complier.Object)
+		objs := make(map[string]common.Object)
 		for k, v := range v {
 			objs[k] = toObject(v)
 		}
 
-		return &complier.Map{Value: objs}
+		return &common.Map{Value: objs}
 	case ARR:
-		var objs []complier.Object
+		var objs []common.Object
 		for _, e := range v {
 			objs = append(objs, toObject(e))
 		}
 
-		return &complier.Array{Value: objs}
+		return &common.Array{Value: objs}
 	case IMAP:
-		objs := make(map[string]complier.Object)
+		objs := make(map[string]common.Object)
 		for k, v := range v {
 			objs[k] = toObject(v)
 		}
 
-		return &complier.ImmutableMap{Value: objs}
+		return &common.ImmutableMap{Value: objs}
 	case IARR:
-		var objs []complier.Object
+		var objs []common.Object
 		for _, e := range v {
 			objs = append(objs, toObject(e))
 		}
 
-		return &complier.ImmutableArray{Value: objs}
+		return &common.ImmutableArray{Value: objs}
 	}
 
 	panic(fmt.Errorf("unknown type: %T", v))
 }
 
-func objectZeroCopy(o complier.Object) complier.Object {
+func objectZeroCopy(o common.Object) common.Object {
 	switch o.(type) {
-	case *complier.Int:
-		return &complier.Int{}
-	case *complier.Float:
-		return &complier.Float{}
-	case *complier.Bool:
-		return &complier.Bool{}
-	case *complier.Char:
-		return &complier.Char{}
-	case *complier.String:
-		return &complier.String{}
-	case *complier.Array:
-		return &complier.Array{}
-	case *complier.Map:
-		return &complier.Map{}
-	case *complier.Undefined:
-		return complier.UndefinedValue
-	case *complier.Error:
-		return &complier.Error{}
-	case *complier.Bytes:
-		return &complier.Bytes{}
-	case *complier.ImmutableArray:
-		return &complier.ImmutableArray{}
-	case *complier.ImmutableMap:
-		return &complier.ImmutableMap{}
+	case *common.Int:
+		return &common.Int{}
+	case *common.Float:
+		return &common.Float{}
+	case *common.Bool:
+		return &common.Bool{}
+	case *common.Char:
+		return &common.Char{}
+	case *common.String:
+		return &common.String{}
+	case *common.Array:
+		return &common.Array{}
+	case *common.Map:
+		return &common.Map{}
+	case *common.Undefined:
+		return common.UndefinedValue
+	case *common.Error:
+		return &common.Error{}
+	case *common.Bytes:
+		return &common.Bytes{}
+	case *common.ImmutableArray:
+		return &common.ImmutableArray{}
+	case *common.ImmutableMap:
+		return &common.ImmutableMap{}
 	case nil:
 		panic("nil")
 	default:

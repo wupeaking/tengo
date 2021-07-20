@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"github.com/d5/tengo/v2/complier"
 	"github.com/d5/tengo/v2/parser"
 	"github.com/d5/tengo/v2/stdlib"
+	"github.com/d5/tengo/v2/vm"
 )
 
 func main() {
@@ -21,7 +23,19 @@ func main() {
 			"Error reading input file: %s\n", err.Error())
 		os.Exit(1)
 	}
-	CompileOnly(modules, inputData, inputFile, "")
+	err = CompileOnly(modules, inputData, inputFile, "")
+	if err != nil {
+		panic(err)
+	}
+
+	byteCodes, err := ioutil.ReadFile("example.tengo.out")
+	if err != nil {
+		panic(err)
+	}
+	err = RunCompiled(modules, byteCodes)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func CompileOnly(
@@ -38,7 +52,7 @@ func CompileOnly(
 		outputFile = inputFile + ".out"
 	}
 
-	out, err := os.OpenFile(outputFile, os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	out, err := os.Create(outputFile)
 	if err != nil {
 		return
 	}
@@ -55,6 +69,7 @@ func CompileOnly(
 		return
 	}
 	fmt.Println(outputFile)
+
 	return
 }
 
@@ -82,4 +97,16 @@ func compileSrc(
 	bytecode := c.Bytecode()
 	bytecode.RemoveDuplicates()
 	return bytecode, nil
+}
+
+func RunCompiled(modules *common.ModuleMap, data []byte) (err error) {
+	bytecode := &complier.Bytecode{}
+	err = bytecode.Decode(bytes.NewReader(data), modules)
+	if err != nil {
+		return
+	}
+
+	machine := vm.NewVM(bytecode, nil, -1)
+	err = machine.Run()
+	return
 }

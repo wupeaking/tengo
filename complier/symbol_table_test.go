@@ -1,8 +1,9 @@
-package complier
+package complier_test
 
 import (
 	"testing"
 
+	"github.com/d5/tengo/v2/complier"
 	"github.com/d5/tengo/v2/require"
 )
 
@@ -92,37 +93,37 @@ func TestSymbolTable(t *testing.T) {
 
 func symbol(
 	name string,
-	scope SymbolScope,
+	scope complier.SymbolScope,
 	index int,
-) *Symbol {
-	return &Symbol{
+) *complier.Symbol {
+	return &complier.Symbol{
 		Name:  name,
 		Scope: scope,
 		Index: index,
 	}
 }
 
-func globalSymbol(name string, index int) *Symbol {
-	return symbol(name, ScopeGlobal, index)
+func globalSymbol(name string, index int) *complier.Symbol {
+	return symbol(name, complier.ScopeGlobal, index)
 }
 
-func localSymbol(name string, index int) *Symbol {
-	return symbol(name, ScopeLocal, index)
+func localSymbol(name string, index int) *complier.Symbol {
+	return symbol(name, complier.ScopeLocal, index)
 }
 
-func freeSymbol(name string, index int) *Symbol {
-	return symbol(name, ScopeFree, index)
+func freeSymbol(name string, index int) *complier.Symbol {
+	return symbol(name, complier.ScopeFree, index)
 }
 
-func symbolTable() *SymbolTable {
-	return NewSymbolTable()
+func symbolTable() *complier.SymbolTable {
+	return complier.NewSymbolTable()
 }
 
 func resolveExpect(
 	t *testing.T,
-	symbolTable *SymbolTable,
+	symbolTable *complier.SymbolTable,
 	name string,
-	expectedSymbol *Symbol,
+	expectedSymbol *complier.Symbol,
 	expectedDepth int,
 ) {
 	actualSymbol, actualDepth, ok := symbolTable.Resolve(name, true)

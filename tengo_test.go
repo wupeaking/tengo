@@ -1,4 +1,4 @@
-package complier
+package tengo_test
 
 import (
 	"strings"

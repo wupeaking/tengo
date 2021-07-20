@@ -1,4 +1,4 @@
-package scripts
+package scripts_test
 
 import (
 	"context"
@@ -10,26 +10,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/d5/tengo/v2/complier"
+	"github.com/d5/tengo/v2/common"
 	"github.com/d5/tengo/v2/require"
+	"github.com/d5/tengo/v2/scripts"
 	"github.com/d5/tengo/v2/stdlib"
 	"github.com/d5/tengo/v2/token"
 )
 
 func TestScript_Add(t *testing.T) {
-	s := NewScript([]byte(`a := b; c := test(b); d := test(5)`))
+	s := scripts.NewScript([]byte(`a := b; c := test(b); d := test(5)`))
 	require.NoError(t, s.Add("b", 5))     // b = 5
 	require.NoError(t, s.Add("b", "foo")) // b = "foo"  (re-define before compilation)
 	require.NoError(t, s.Add("test",
-		func(args ...complier.Object) (ret complier.Object, err error) {
+		func(args ...common.Object) (ret common.Object, err error) {
 			if len(args) > 0 {
 				switch arg := args[0].(type) {
-				case *complier.Int:
-					return &complier.Int{Value: arg.Value + 1}, nil
+				case *common.Int:
+					return &common.Int{Value: arg.Value + 1}, nil
 				}
 			}
 
-			return &complier.Int{Value: 0}, nil
+			return &common.Int{Value: 0}, nil
 		}))
 	c, err := s.Compile()
 	require.NoError(t, err)
@@ -41,7 +42,7 @@ func TestScript_Add(t *testing.T) {
 }
 
 func TestScript_Remove(t *testing.T) {
-	s := NewScript([]byte(`a := b`))
+	s := scripts.NewScript([]byte(`a := b`))
 	err := s.Add("b", 5)
 	require.NoError(t, err)
 	require.True(t, s.Remove("b")) // b is removed
@@ -50,7 +51,7 @@ func TestScript_Remove(t *testing.T) {
 }
 
 func TestScript_Run(t *testing.T) {
-	s := NewScript([]byte(`a := b`))
+	s := scripts.NewScript([]byte(`a := b`))
 	err := s.Add("b", 5)
 	require.NoError(t, err)
 	c, err := s.Run()
@@ -60,7 +61,7 @@ func TestScript_Run(t *testing.T) {
 }
 
 func TestScript_BuiltinModules(t *testing.T) {
-	s := NewScript([]byte(`math := import("math"); a := math.abs(-19.84)`))
+	s := scripts.NewScript([]byte(`math := import("math"); a := math.abs(-19.84)`))
 	s.SetImports(stdlib.GetModuleMap("math"))
 	c, err := s.Run()
 	require.NoError(t, err)
@@ -82,7 +83,7 @@ func TestScript_BuiltinModules(t *testing.T) {
 }
 
 func TestScript_SourceModules(t *testing.T) {
-	s := NewScript([]byte(`
+	s := scripts.NewScript([]byte(`
 enum := import("enum")
 a := enum.all([1,2,3], func(_, v) { 
 	return v > 0 
@@ -101,7 +102,7 @@ a := enum.all([1,2,3], func(_, v) {
 
 func TestScript_SetMaxConstObjects(t *testing.T) {
 	// one constant '5'
-	s := NewScript([]byte(`a := 5`))
+	s := scripts.NewScript([]byte(`a := 5`))
 	s.SetMaxConstObjects(1) // limit = 1
 	_, err := s.Compile()
 	require.NoError(t, err)
@@ -111,7 +112,7 @@ func TestScript_SetMaxConstObjects(t *testing.T) {
 	require.Equal(t, "exceeding constant objects limit: 1", err.Error())
 
 	// two constants '5' and '1'
-	s = NewScript([]byte(`a := 5 + 1`))
+	s = scripts.NewScript([]byte(`a := 5 + 1`))
 	s.SetMaxConstObjects(2) // limit = 2
 	_, err = s.Compile()
 	require.NoError(t, err)
@@ -121,7 +122,7 @@ func TestScript_SetMaxConstObjects(t *testing.T) {
 	require.Equal(t, "exceeding constant objects limit: 2", err.Error())
 
 	// duplicates will be removed
-	s = NewScript([]byte(`a := 5 + 5`))
+	s = scripts.NewScript([]byte(`a := 5 + 5`))
 	s.SetMaxConstObjects(1) // limit = 1
 	_, err = s.Compile()
 	require.NoError(t, err)
@@ -131,7 +132,7 @@ func TestScript_SetMaxConstObjects(t *testing.T) {
 	require.Equal(t, "exceeding constant objects limit: 1", err.Error())
 
 	// no limit set
-	s = NewScript([]byte(`a := 1 + 2 + 3 + 4 + 5`))
+	s = scripts.NewScript([]byte(`a := 1 + 2 + 3 + 4 + 5`))
 	_, err = s.Compile()
 	require.NoError(t, err)
 }
@@ -170,30 +171,30 @@ for i:=1; i<=d; i++ {
 
 e := mod1.double(s)
 `)
-	mod1 := map[string]complier.Object{
-		"double": &complier.UserFunction{
-			Value: func(args ...complier.Object) (
-				ret complier.Object,
+	mod1 := map[string]common.Object{
+		"double": &common.UserFunction{
+			Value: func(args ...common.Object) (
+				ret common.Object,
 				err error,
 			) {
-				arg0, _ := complier.ToInt64(args[0])
-				ret = &complier.Int{Value: arg0 * 2}
+				arg0, _ := common.ToInt64(args[0])
+				ret = &common.Int{Value: arg0 * 2}
 				return
 			},
 		},
 	}
 
-	scr := NewScript(code)
+	scr := scripts.NewScript(code)
 	_ = scr.Add("a", 0)
 	_ = scr.Add("b", 0)
 	_ = scr.Add("c", 0)
-	mods := complier.NewModuleMap()
+	mods := common.NewModuleMap()
 	mods.AddBuiltinModule("mod1", mod1)
 	scr.SetImports(mods)
 	compiled, err := scr.Compile()
 	require.NoError(t, err)
 
-	executeFn := func(compiled *Compiled, a, b, c int) (d, e int) {
+	executeFn := func(compiled *scripts.Compiled, a, b, c int) (d, e int) {
 		_ = compiled.Set("a", a)
 		_ = compiled.Set("b", b)
 		_ = compiled.Set("c", c)
@@ -208,7 +209,7 @@ e := mod1.double(s)
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
 	for i := 0; i < concurrency; i++ {
-		go func(compiled *Compiled) {
+		go func(compiled *scripts.Compiled) {
 			time.Sleep(time.Duration(rand.Int63n(50)) * time.Millisecond)
 			defer wg.Done()
 
@@ -227,7 +228,7 @@ e := mod1.double(s)
 }
 
 type Counter struct {
-	complier.ObjectImpl
+	common.ObjectImpl
 	value int64
 }
 
@@ -241,8 +242,8 @@ func (o *Counter) String() string {
 
 func (o *Counter) BinaryOp(
 	op token.Token,
-	rhs complier.Object,
-) (complier.Object, error) {
+	rhs common.Object,
+) (common.Object, error) {
 	switch rhs := rhs.(type) {
 	case *Counter:
 		switch op {
@@ -251,7 +252,7 @@ func (o *Counter) BinaryOp(
 		case token.Sub:
 			return &Counter{value: o.value - rhs.value}, nil
 		}
-	case *complier.Int:
+	case *common.Int:
 		switch op {
 		case token.Add:
 			return &Counter{value: o.value + rhs.Value}, nil
@@ -267,7 +268,7 @@ func (o *Counter) IsFalsy() bool {
 	return o.value == 0
 }
 
-func (o *Counter) Equals(t complier.Object) bool {
+func (o *Counter) Equals(t common.Object) bool {
 	if tc, ok := t.(*Counter); ok {
 		return o.value == tc.value
 	}
@@ -275,12 +276,12 @@ func (o *Counter) Equals(t complier.Object) bool {
 	return false
 }
 
-func (o *Counter) Copy() complier.Object {
+func (o *Counter) Copy() common.Object {
 	return &Counter{value: o.value}
 }
 
-func (o *Counter) Call(_ ...complier.Object) (complier.Object, error) {
-	return &complier.Int{Value: o.value}, nil
+func (o *Counter) Call(_ ...common.Object) (common.Object, error) {
+	return &common.Int{Value: o.value}, nil
 }
 
 func (o *Counter) CanCall() bool {
@@ -311,7 +312,7 @@ out := c1()
 
 func compiledGetCounter(
 	t *testing.T,
-	c *Compiled,
+	c *scripts.Compiled,
 	name string,
 	expected *Counter,
 ) {
@@ -325,8 +326,8 @@ func compiledGetCounter(
 
 func TestScriptSourceModule(t *testing.T) {
 	// script1 imports "mod1"
-	scr := NewScript([]byte(`out := import("mod")`))
-	mods := complier.NewModuleMap()
+	scr := scripts.NewScript([]byte(`out := import("mod")`))
+	mods := common.NewModuleMap()
 	mods.AddSourceModule("mod", []byte(`export 5`))
 	scr.SetImports(mods)
 	c, err := scr.Run()
@@ -334,8 +335,8 @@ func TestScriptSourceModule(t *testing.T) {
 	require.Equal(t, int64(5), c.Get("out").Value())
 
 	// executing module function
-	scr = NewScript([]byte(`fn := import("mod"); out := fn()`))
-	mods = complier.NewModuleMap()
+	scr = scripts.NewScript([]byte(`fn := import("mod"); out := fn()`))
+	mods = common.NewModuleMap()
 	mods.AddSourceModule("mod",
 		[]byte(`a := 3; export func() { return a + 5 }`))
 	scr.SetImports(mods)
@@ -343,17 +344,17 @@ func TestScriptSourceModule(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(8), c.Get("out").Value())
 
-	scr = NewScript([]byte(`out := import("mod")`))
-	mods = complier.NewModuleMap()
+	scr = scripts.NewScript([]byte(`out := import("mod")`))
+	mods = common.NewModuleMap()
 	mods.AddSourceModule("mod",
 		[]byte(`text := import("text"); export text.title("foo")`))
 	mods.AddBuiltinModule("text",
-		map[string]complier.Object{
-			"title": &complier.UserFunction{
+		map[string]common.Object{
+			"title": &common.UserFunction{
 				Name: "title",
-				Value: func(args ...complier.Object) (complier.Object, error) {
-					s, _ := complier.ToString(args[0])
-					return &complier.String{Value: strings.Title(s)}, nil
+				Value: func(args ...common.Object) (common.Object, error) {
+					s, _ := common.ToString(args[0])
+					return &common.String{Value: strings.Title(s)}, nil
 				}},
 		})
 	scr.SetImports(mods)
@@ -382,7 +383,7 @@ func BenchmarkArrayIndexCompare(b *testing.B) {
 }
 
 func bench(n int, input string) {
-	s := NewScript([]byte(input))
+	s := scripts.NewScript([]byte(input))
 	c, err := s.Compile()
 	if err != nil {
 		panic(err)
@@ -479,8 +480,8 @@ func TestCompiled_RunContext(t *testing.T) {
 	require.Equal(t, context.DeadlineExceeded, err)
 }
 
-func compile(t *testing.T, input string, vars M) *Compiled {
-	s := NewScript([]byte(input))
+func compile(t *testing.T, input string, vars M) *scripts.Compiled {
+	s := scripts.NewScript([]byte(input))
 	for vn, vv := range vars {
 		err := s.Add(vn, vv)
 		require.NoError(t, err)
@@ -493,7 +494,7 @@ func compile(t *testing.T, input string, vars M) *Compiled {
 }
 
 func compileError(t *testing.T, input string, vars M) {
-	s := NewScript([]byte(input))
+	s := scripts.NewScript([]byte(input))
 	for vn, vv := range vars {
 		err := s.Add(vn, vv)
 		require.NoError(t, err)
@@ -502,14 +503,14 @@ func compileError(t *testing.T, input string, vars M) {
 	require.Error(t, err)
 }
 
-func compiledRun(t *testing.T, c *Compiled) {
+func compiledRun(t *testing.T, c *scripts.Compiled) {
 	err := c.Run()
 	require.NoError(t, err)
 }
 
 func compiledGet(
 	t *testing.T,
-	c *Compiled,
+	c *scripts.Compiled,
 	name string,
 	expected interface{},
 ) {
@@ -520,7 +521,7 @@ func compiledGet(
 
 func compiledGetAll(
 	t *testing.T,
-	c *Compiled,
+	c *scripts.Compiled,
 	expected M,
 ) {
 	vars := c.GetAll()
@@ -540,7 +541,7 @@ func compiledGetAll(
 
 func compiledIsDefined(
 	t *testing.T,
-	c *Compiled,
+	c *scripts.Compiled,
 	name string,
 	expected bool,
 ) {

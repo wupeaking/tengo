@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/d5/tengo/v2"
+	"github.com/d5/tengo/v2/scripts"
 )
 
 func Example() {
@@ -22,7 +22,7 @@ each([a, b, c, d], func(x) {
 })`
 
 	// create a new Script instance
-	script := tengo.NewScript([]byte(src))
+	script := scripts.NewScript([]byte(src))
 
 	// set values
 	_ = script.Add("a", 1)

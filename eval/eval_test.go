@@ -1,9 +1,10 @@
-package eval
+package eval_test
 
 import (
 	"context"
 	"testing"
 
+	"github.com/d5/tengo/v2/eval"
 	"github.com/d5/tengo/v2/require"
 )
 
@@ -14,7 +15,7 @@ func TestEval(t *testing.T) {
 		expected interface{},
 	) {
 		ctx := context.Background()
-		actual, err := Eval(ctx, expr, params)
+		actual, err := eval.Eval(ctx, expr, params)
 		require.NoError(t, err)
 		require.Equal(t, expected, actual)
 	}

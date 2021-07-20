@@ -307,25 +307,25 @@ func Test_builtinSplice(t *testing.T) {
 		},
 		{name: "nothing2",
 			args: []common.Object{
-				&Array{Value: []common.Object{
+				&common.Array{Value: []common.Object{
 					&common.Int{Value: 0},
 					&common.Int{Value: 1},
 					&common.Int{Value: 2}}}},
-			Array: &Array{Value: []common.Object{}},
-			deleted: &Array{Value: []common.Object{
+			Array: &common.Array{Value: []common.Object{}},
+			deleted: &common.Array{Value: []common.Object{
 				&common.Int{Value: 0},
 				&common.Int{Value: 1},
 				&common.Int{Value: 2}}},
 		},
 		{name: "pop without count",
 			args: []common.Object{
-				&Array{Value: []common.Object{
+				&common.Array{Value: []common.Object{
 					&common.Int{Value: 0},
 					&common.Int{Value: 1},
 					&common.Int{Value: 2}}},
 				&common.Int{Value: 2}},
-			deleted: &Array{Value: []common.Object{&common.Int{Value: 2}}},
-			Array: &Array{Value: []common.Object{
+			deleted: &common.Array{Value: []common.Object{&common.Int{Value: 2}}},
+			Array: &common.Array{Value: []common.Object{
 				&common.Int{Value: 0}, &common.Int{Value: 1}}},
 		},
 	}
@@ -346,7 +346,7 @@ func Test_builtinSplice(t *testing.T) {
 			}
 			if tt.Array != nil && !reflect.DeepEqual(tt.Array, tt.args[0]) {
 				t.Errorf("builtinSplice() arrays are not equal expected"+
-					" %s, got %s", tt.Array, tt.args[0].(*Array))
+					" %s, got %s", tt.Array, tt.args[0].(*common.Array))
 			}
 		})
 	}
@@ -432,6 +432,7 @@ func Test_builtinRange(t *testing.T) {
 		{name: "negative range",
 			args:    []common.Object{&common.Int{}, &common.Int{Value: -5}},
 			wantErr: false,
+			result: &common.Array{
 				Value: []common.Object{
 					intObject(0),
 					intObject(-1),
@@ -453,7 +454,6 @@ func Test_builtinRange(t *testing.T) {
 				},
 			},
 		},
-
 		{name: "negative with step",
 			args:    []common.Object{&common.Int{}, &common.Int{Value: -10}, &common.Int{Value: 2}},
 			wantErr: false,
@@ -467,11 +467,34 @@ func Test_builtinRange(t *testing.T) {
 				},
 			},
 		},
-
+		{name: "positive with step",
+			args:    []common.Object{&common.Int{}, &common.Int{Value: 5}, &common.Int{Value: 2}},
+			wantErr: false,
+			result: &common.Array{
+				Value: []common.Object{
+					intObject(0),
+					intObject(2),
+					intObject(4),
+				},
+			},
+		},
+		{name: "negative with step",
+			args:    []common.Object{&common.Int{}, &common.Int{Value: -10}, &common.Int{Value: 2}},
+			wantErr: false,
+			result: &common.Array{
+				Value: []common.Object{
+					intObject(0),
+					intObject(-2),
+					intObject(-4),
+					intObject(-6),
+					intObject(-8),
+				},
+			},
+		},
 		{name: "large range",
 			args:    []common.Object{intObject(-10), intObject(10), &common.Int{Value: 3}},
 			wantErr: false,
-			result: &Array{
+			result: &common.Array{
 				Value: []common.Object{
 					intObject(-10),
 					intObject(-7),
@@ -482,8 +505,9 @@ func Test_builtinRange(t *testing.T) {
 					intObject(8),
 				},
 			},
-		}
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := builtinRange(tt.args...)
@@ -498,8 +522,12 @@ func Test_builtinRange(t *testing.T) {
 			}
 			if tt.result != nil && !reflect.DeepEqual(tt.result, got) {
 				t.Errorf("builtinRange() arrays are not equal expected"+
-					" %s, got %s", tt.result, got.(*Array))
+					" %s, got %s", tt.result, got.(*common.Array))
 			}
 		})
 	}
+}
+
+func intObject(v int64) *common.Int {
+	return &common.Int{Value: v}
 }
